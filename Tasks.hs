@@ -141,11 +141,8 @@ group_range range_lo range_hi = foldr (\x acc -> if ((read x :: Integer) >= rang
 group_minutes :: Row -> Row
 group_minutes l = [(head l), (show $ group_range range1_lo range1_hi (tail l)), (show $ group_range range2_lo range2_hi (tail l)), (show $ group_range range3_lo range3_hi (tail l))]
 
-get_activ_summary_VA :: Table -> Row
-get_activ_summary_VA t = group_minutes $ (transpose t) !! (length (head t) - 3)
-
-get_activ_summary_FA :: Table -> Row
-get_activ_summary_FA t = group_minutes $ (transpose t) !! (length (head t) - 2)
+get_activ_summary_intensity :: Table -> Int -> Row
+get_activ_summary_intensity t idx = group_minutes $ (transpose t) !! idx
 
 get_activ_summary_LA :: Table -> Row
 get_activ_summary_LA t = group_minutes $ (transpose t) !! (length (head t) - 1)
@@ -154,7 +151,7 @@ get_activ_summary_header :: Row
 get_activ_summary_header = ["column","range1","range2","range3"]
 
 get_activ_summary :: Table -> Table
-get_activ_summary t = [get_activ_summary_header, get_activ_summary_VA t, get_activ_summary_FA t, get_activ_summary_LA t]
+get_activ_summary t = [get_activ_summary_header, get_activ_summary_intensity t (length (head t) - 3), get_activ_summary_intensity t (length (head t) - 2), get_activ_summary_intensity t (length (head t) - 1)]
 
 
 -- Task 5

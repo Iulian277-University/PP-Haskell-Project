@@ -161,9 +161,47 @@ get_ranking :: Table -> Table
 get_ranking t = [get_ranking_header] ++ sortBy (\p1 p2 -> compare (read $ (p1 !! 1) :: Integer) (read $ (p2 !! 1) :: Integer)) (tail t)
 
 -- Task 6
+eight_hours3 :: Table
+eight_hours3 =
+    [["Name","10","11","12","13","14","15","16","17"],
+    ["Olivia Noah","373","160","151","0","0","0","0","0"],
+    ["Riley Jackson","31","0","0","7","0","0","0","0"],
+    ["Emma Aiden","45","8","0","0","0","0","0","0"],
+    ["Aria Lucas","0","0","0","0","0","0","0","0"],
+    ["Anna Hudson","0","688","7","386","0","185","777","577"],
+    ["Mackenzie John","643","179","440","601","1179","4688","0","2670"],
+    ["Kaylee Zane","53","431","0","0","2284","361","587","25"],
+    ["Victoria Connor","30","0","88","0","1470","194","0","67"]]
+
+get_steps_diff_table_header :: Row
+get_steps_diff_table_header = ["Name","Average first 4h","Average last 4h","Difference"]
+
+row_steps_to_sum :: Row -> Float
+row_steps_to_sum = foldr (\x acc -> acc + (read x :: Float)) 0
+row_steps_to_avg :: Row -> Float
+row_steps_to_avg l = row_steps_to_sum l / 4
+
+get_steps_names :: Table -> Row
+get_steps_names t = head (transpose t)
+
+get_steps_first4h :: Table -> [Float]
+get_steps_first4h t = map row_steps_to_avg $ map (take 4) $ map (tail) t
+
+get_steps_last4h :: Table -> [Float]
+get_steps_last4h t = map row_steps_to_avg $ map (drop 4) $ map (tail) t
+
+get_steps_diff :: [Float] -> [Float] -> [Float]
+get_steps_diff l1 l2 = map abs (zipWith (-) l1 l2)
 
 get_steps_diff_table :: Table -> Table
-get_steps_diff_table m = undefined
+get_steps_diff_table = undefined
+
+{-
+*Tasks> l1 = get_steps_first4h eight_hours3
+*Tasks> l2 = get_steps_last4h eight_hours3
+*Tasks> get_steps_diff l1 l2
+[4.0,171.0,9.5,13.25,0.0,114.5,1668.5,693.25,403.25]
+-}
 
 
 -- Task 7

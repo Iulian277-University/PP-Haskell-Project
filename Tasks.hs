@@ -14,6 +14,7 @@ import Data.List
 import Text.Printf
 import Data.Array
 import GHC.Float (int2Float)
+import Data.Type.Coercion (trans)
 
 type CSV = String
 type Value = String
@@ -108,10 +109,52 @@ steps_per_h_header = ["H10","H11","H12","H13","H14","H15","H16","H17"]
 
 get_avg_steps_per_h :: Table -> Table
 get_avg_steps_per_h t = [steps_per_h_header] ++ [float_list_to_row t]
+
+
 -- Task 4
+physical_activity2 :: Table
+physical_activity2 =
+    [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
+    ["Olivia Noah","13162","8.50","25","13","328"],
+    ["Riley Jackson","10735","6.97","21","19","217"],
+    ["Emma Aiden","10460","6.74","30","11","181"],
+    ["Ava Elijah","9762","6.28","29","34","209"],
+    ["Isabella Grayson","12669","8.16","36","10","221"]]
+
+-- Declare ranges
+range1_lo = 0
+range1_hi = 50
+
+range2_lo = range1_hi
+range2_hi = 100
+
+range3_lo = range2_hi
+range3_hi = 500
+
+-- VeryActiveMinutes    - at pos (length t - 3)
+-- FairlyActiveMinutes  - at pos (length t - 2)
+-- LightlyActiveMinutes - at pos (length t - 1)
+
+group_range :: Integer -> Integer -> Row -> Integer 
+group_range range_lo range_hi = foldr (\x acc -> if ((read x :: Integer) >= range_lo) && ((read x :: Integer) < range_hi) then acc + 1 else acc) 0
+
+group_minutes :: Row -> Row
+group_minutes l = [(head l), (show $ group_range range1_lo range1_hi (tail l)), (show $ group_range range2_lo range2_hi (tail l)), (show $ group_range range3_lo range3_hi (tail l))]
+
+get_activ_summary_VA :: Table -> Row
+get_activ_summary_VA t = group_minutes $ (transpose t) !! (length (head t) - 3)
+
+get_activ_summary_FA :: Table -> Row
+get_activ_summary_FA t = group_minutes $ (transpose t) !! (length (head t) - 2)
+
+get_activ_summary_LA :: Table -> Row
+get_activ_summary_LA t = group_minutes $ (transpose t) !! (length (head t) - 1)
+
+get_activ_summary_header :: Row
+get_activ_summary_header = ["column","range1","range2","range3"]
 
 get_activ_summary :: Table -> Table
-get_activ_summary m = undefined
+get_activ_summary t = [get_activ_summary_header, get_activ_summary_VA t, get_activ_summary_FA t, get_activ_summary_LA t]
 
 
 -- Task 5

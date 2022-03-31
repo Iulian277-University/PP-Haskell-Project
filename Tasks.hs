@@ -14,7 +14,6 @@ import Data.List
 import Text.Printf
 import Data.Array
 import GHC.Float (int2Float)
-import Data.Type.Coercion (trans)
 
 type CSV = String
 type Value = String
@@ -121,7 +120,7 @@ physical_activity2 =
     ["Ava Elijah","9762","6.28","29","34","209"],
     ["Isabella Grayson","12669","8.16","36","10","221"]]
 
--- Declare ranges
+-- Ranges
 range1_lo = 0
 range1_hi = 50
 
@@ -131,9 +130,9 @@ range2_hi = 100
 range3_lo = range2_hi
 range3_hi = 500
 
--- VeryActiveMinutes    - at pos (length t - 3)
--- FairlyActiveMinutes  - at pos (length t - 2)
--- LightlyActiveMinutes - at pos (length t - 1)
+-- VeryActiveMinutes    - at pos (length (head t) - 3)
+-- FairlyActiveMinutes  - at pos (length (head t) - 2)
+-- LightlyActiveMinutes - at pos (length (head t) - 1)
 
 group_range :: Integer -> Integer -> Row -> Integer 
 group_range range_lo range_hi = foldr (\x acc -> if ((read x :: Integer) >= range_lo) && ((read x :: Integer) < range_hi) then acc + 1 else acc) 0
@@ -155,10 +154,11 @@ get_activ_summary t = [get_activ_summary_header, get_activ_summary_intensity t (
 
 
 -- Task 5
+get_ranking_header :: Row
+get_ranking_header = ["Name","Total Steps"]
 
 get_ranking :: Table -> Table
-get_ranking m = undefined
-
+get_ranking t = [get_ranking_header] ++ sortBy (\p1 p2 -> compare (read $ (p1 !! 1) :: Integer) (read $ (p2 !! 1) :: Integer)) (tail t)
 
 -- Task 6
 

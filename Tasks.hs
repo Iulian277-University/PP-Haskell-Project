@@ -164,10 +164,8 @@ get_ranking t = [get_ranking_header] ++ sortBy (\p1 p2 -> compare (read $ (p1 !!
 eight_hours3 :: Table
 eight_hours3 =
     [["Name","10","11","12","13","14","15","16","17"],
-    ["Olivia Noah","373","160","151","0","0","0","0","0"],
-    ["Riley Jackson","31","0","0","7","0","0","0","0"],
-    ["Emma Aiden","45","8","0","0","0","0","0","0"],
-    ["Aria Lucas","0","0","0","0","0","0","0","0"],
+    ["Elizabeth Nathan","0","805","826","394","476","12","433","146"],
+    ["Grace Eli","556","1417","0","0","19","1131","99","0"],
     ["Anna Hudson","0","688","7","386","0","185","777","577"],
     ["Mackenzie John","643","179","440","601","1179","4688","0","2670"],
     ["Kaylee Zane","53","431","0","0","2284","361","587","25"],
@@ -193,15 +191,14 @@ get_steps_last4h t = map row_steps_to_avg $ map (drop 4) $ map (tail) t
 get_steps_diff :: [Float] -> [Float] -> [Float]
 get_steps_diff l1 l2 = map abs (zipWith (-) l1 l2)
 
-get_steps_diff_table :: Table -> Table
-get_steps_diff_table = undefined
+float_list_to_row2 :: [Float] -> Row
+float_list_to_row2 = foldr (\x acc -> (printf "%.2f" x):acc) []
 
-{-
-*Tasks> l1 = get_steps_first4h eight_hours3
-*Tasks> l2 = get_steps_last4h eight_hours3
-*Tasks> get_steps_diff l1 l2
-[4.0,171.0,9.5,13.25,0.0,114.5,1668.5,693.25,403.25]
--}
+compute_4_rows_table :: Table -> Table
+compute_4_rows_table t = transpose ([(get_steps_names t)] ++ [(float_list_to_row2 $ get_steps_first4h t)] ++ [(float_list_to_row2 $ get_steps_last4h t)] ++ [(float_list_to_row2 $ get_steps_diff (get_steps_first4h t) (get_steps_last4h t))])
+
+get_steps_diff_table :: Table -> Table
+get_steps_diff_table t = [get_steps_diff_table_header] ++ sortBy (\p1 p2 -> compare (read $ (p1 !! 3) :: Float) (read $ (p2 !! 3) :: Float)) (compute_4_rows_table (tail t))
 
 
 -- Task 7

@@ -74,10 +74,10 @@ compute_average_steps t = [compute_header_of_table (head t)] ++ (map compute_res
 -- Task 2
 
 -- Number of people who have achieved their goal:
-threshold :: Float
-threshold = 1000
+threshold_goal :: Float
+threshold_goal = 1000
 get_passed_people_num :: Table -> Int
-get_passed_people_num t = (foldr (\x acc -> if x >= threshold then acc + 1 else acc) 0) $ (map compute_steps_for_row (tail t)) 
+get_passed_people_num t = (foldr (\x acc -> if x >= threshold_goal then acc + 1 else acc) 0) $ (map compute_steps_for_row (tail t)) 
 
 -- Percentage of people who have achieved their goal:
 get_passed_people_percentage :: Table -> Float
@@ -85,17 +85,29 @@ get_passed_people_percentage t = (int2Float $ get_passed_people_num t) / (int2Fl
 
 -- Average number of daily steps
 get_steps_total :: Table -> Float
-get_steps_total t = (foldr (\x total_steps -> total_steps + x) 0) $ (map compute_steps_for_row (tail t)) 
+get_steps_total t = (foldr (\x total_steps -> total_steps + x) 0) $ (map compute_steps_for_row t) 
 
 get_steps_avg :: Table -> Float
-get_steps_avg t = (get_steps_total t) / (int2Float $ (length t - 1))
+get_steps_avg t = (get_steps_total (tail t)) / (int2Float $ (length t - 1))
+
 
 -- Task 3
+-- I need to compute the sum on columns
+-- For that, I will transpose the matrix (table) and compute sum on rows
+get_total_steps_per_h :: Table -> [Float]
+get_total_steps_per_h t = map compute_steps_for_row $ tail (transpose t) -- this `tail` removes the names
+
+get_avg_steps_per_h_list :: Table -> [Float]
+get_avg_steps_per_h_list t = foldr (\x acc -> (x / (int2Float $ (length t - 1))):acc) [] (get_total_steps_per_h t) -- this `tail` removes the header
+
+float_list_to_row :: Table -> Row
+float_list_to_row t = map (printf "%.2f") (get_avg_steps_per_h_list t)
+
+steps_per_h_header :: Row
+steps_per_h_header = ["H10","H11","H12","H13","H14","H15","H16","H17"]
 
 get_avg_steps_per_h :: Table -> Table
-get_avg_steps_per_h m = undefined
-
-
+get_avg_steps_per_h t = [steps_per_h_header] ++ [float_list_to_row t]
 -- Task 4
 
 get_activ_summary :: Table -> Table

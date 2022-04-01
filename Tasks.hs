@@ -95,10 +95,10 @@ get_steps_avg t = (get_steps_total (tail t)) / (int2Float $ (length t - 1))
 -- I need to compute the sum on columns
 -- For that, I will transpose the matrix (table) and compute sum on rows
 get_total_steps_per_h :: Table -> [Float]
-get_total_steps_per_h t = map compute_steps_for_row $ tail (transpose t) -- this `tail` removes the names
+get_total_steps_per_h t = map compute_steps_for_row $ tail (transpose t)
 
 get_avg_steps_per_h_list :: Table -> [Float]
-get_avg_steps_per_h_list t = foldr (\x acc -> (x / (int2Float $ (length t - 1))):acc) [] (get_total_steps_per_h t) -- this `tail` removes the header
+get_avg_steps_per_h_list t = foldr (\x acc -> (x / (int2Float $ (length t - 1))):acc) [] (get_total_steps_per_h t)
 
 float_list_to_row :: Table -> Row
 float_list_to_row t = map (printf "%.2f") (get_avg_steps_per_h_list t)
@@ -138,7 +138,7 @@ group_range :: Integer -> Integer -> Row -> Integer
 group_range range_lo range_hi = foldr (\x acc -> if ((read x :: Integer) >= range_lo) && ((read x :: Integer) < range_hi) then acc + 1 else acc) 0
 
 group_minutes :: Row -> Row
-group_minutes l = [(head l), (show $ group_range range1_lo range1_hi (tail l)), (show $ group_range range2_lo range2_hi (tail l)), (show $ group_range range3_lo range3_hi (tail l))]
+group_minutes r = [(head r), (show $ group_range range1_lo range1_hi (tail r)), (show $ group_range range2_lo range2_hi (tail r)), (show $ group_range range3_lo range3_hi (tail r))]
 
 get_activ_summary_intensity :: Table -> Int -> Row
 get_activ_summary_intensity t idx = group_minutes $ (transpose t) !! idx
@@ -177,14 +177,13 @@ get_steps_diff_table_header = ["Name","Average first 4h","Average last 4h","Diff
 row_steps_to_sum :: Row -> Float
 row_steps_to_sum = foldr (\x acc -> acc + (read x :: Float)) 0
 row_steps_to_avg :: Row -> Float
-row_steps_to_avg l = row_steps_to_sum l / 4
+row_steps_to_avg r = row_steps_to_sum r / 4
 
 get_steps_names :: Table -> Row
 get_steps_names t = head (transpose t)
 
 get_steps_first4h :: Table -> [Float]
 get_steps_first4h t = map row_steps_to_avg $ map (take 4) $ map (tail) t
-
 get_steps_last4h :: Table -> [Float]
 get_steps_last4h t = map row_steps_to_avg $ map (drop 4) $ map (tail) t
 
@@ -202,18 +201,61 @@ get_steps_diff_table t = [get_steps_diff_table_header] ++ sortBy (\p1 p2 -> comp
 
 
 -- Task 7
+table_test_task7 :: Table
+table_test_task7 =
+    [["Olivia Noah","373","160","151","0","","","","0"],
+    ["Riley Jackson","31","","0","7","0","","0","0"],
+    ["","45","8","0","0","0","0","0","0"],
+    ["Aria Lucas","0","0","0","0","0","0","0","0"],
+    ["Aaliyah Oliver","0","","0","0","4","0","20","0"],
+    ["Amelia Caden","0","0","","0","0","0","0","847"],
+    [""]]
 
--- Applies the given function to all the values
+-- Applies the given function (f) to all the values from the table (t)
 vmap :: (Value -> Value) -> Table -> Table
-vmap f m = undefined
+vmap f t = map (vmap_row f) t where
+    vmap_row f = foldr (\row acc -> (f row):acc) []
+
+-- This function will replace the null string "" with "NaN" (similar to pandas)
+f_test :: Value -> Value
+f_test = (\x -> if x == "" then "NaN" else x)
+
+vmap_test :: Table
+vmap_test = vmap f_test table_test_task7
 
 
 -- Task 8
+table_test_task8 :: Table
+table_test_task8 =
+    [["Olivia Noah","373","160","151"],
+    ["Riley Jackson","31","0","0","7","0","0","0","0"],
+    ["Emma Aiden","0","0"],
+    ["Aria Lucas","0","0","0","0","0","0","0","0"],
+    ["Aaliyah Oliver"],
+    ["Amelia Caden","0","0","0","0","0","0","0","847"],
+    ["Layla Muhammad","29","0","0","0","0","0","319","225","159","223"]]
 
--- Applies the given function to all the entries
+-- Applies the given function to all the entries (rows)
 rmap :: (Row -> Row) -> [String] -> Table -> Table
-rmap f s m = undefined
+rmap f s t = zipWith (:) s $ remove_first_col $ (map f t)
 
+remove_first_col :: Table -> Table
+remove_first_col t = foldr (\row acc -> (tail row):acc) [] t
+
+
+threshold_length :: Int
+threshold_length = 5
+-- This function appends "Big" if the row has more than a `threshold_length` elements and "Small" otherwise
+f_row_test :: Row -> Row
+f_row_test r = if length r > threshold_length then reverse("Big":(reverse r)) else reverse("Small":(reverse r))
+
+-- Apply the function `f_row_test` to the table `table_test_task8` and change the column names with the given ones
+rmap_test :: Table
+rmap_test = rmap f_row_test ["Name1", "Name2", "Name3", "Name4", "Name5", "Name6", "Name7"] table_test_task8
+
+
+get_total_slept_mins :: Row -> Float
+get_total_slept_mins = foldr (\x acc -> (read x :: Float) + acc) 0
 
 get_sleep_total :: Row -> Row
-get_sleep_total r = undefined
+get_sleep_total r = [head r] ++ [printf "%.2f" $ get_total_slept_mins (tail r)]

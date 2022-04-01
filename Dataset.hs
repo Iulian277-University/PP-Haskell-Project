@@ -12,7 +12,8 @@
 
 module Dataset where
 
-emails = [["Name","Email"],
+emails = 
+    [["Name","Email"],
     ["Olivia Noah","Olivia.Noah@stud.cs.pub.ro"],
     ["Riley Jackson","Riley.Jackson@stud.cs.pub.ro"],
     ["Emma Aiden","Emma.Aiden@stud.cs.pub.ro"],
@@ -500,7 +501,8 @@ physical_activity =
     ["Easton Liliana","18387","12.91","13","23","361"],
     ["Joshua Kennedy","10538","7.40","25","28","245"]]
 
-sleep_min = [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"],
+sleep_min =
+    [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"],
     ["Mason.Zoe@stud.cs.pub.ro","327","384","412","340","700","304","360"],
     ["Ian.Brooklyn@stud.cs.pub.ro","119","124","796","137","0","0","0"],
     ["Lucy.Dylan@stud.cs.pub.ro","644","722","590","0","0","0","0"],

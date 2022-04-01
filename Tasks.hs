@@ -48,19 +48,19 @@ write_csv = (foldr (++) []).
 
 -- Header of table
 header_of_table :: Row
-header_of_table = ["Name", "Average Number of Steps"] 
+header_of_table = ["Name", "Average Number of Steps"]
 
 -- Compute the total steps from that given row
 compute_steps_for_row :: Row -> Float
-compute_steps_for_row r = (foldr (\x acc -> (read x :: Float) + acc) 0) (tail r)
+compute_steps_for_row r = foldr (\x acc -> (read x :: Float) + acc) 0 (tail r)
 
 -- Generate output in the desired format (average with 2 decimal places)
 compute_results_for_row :: Row -> Row
-compute_results_for_row r = [(head r), printf "%.2f" $ (compute_steps_for_row r / 8)]
+compute_results_for_row r = [head r, printf "%.2f" (compute_steps_for_row r / 8)]
 
 -- For each entry, calculate the `average` number of steps
 compute_average_steps :: Table -> Table
-compute_average_steps t = [header_of_table] ++ (map compute_results_for_row (tail t))
+compute_average_steps t = header_of_table : map compute_results_for_row (tail t)
 
 
 -- Task 2
@@ -72,19 +72,19 @@ threshold_goal = 1000
 
 -- Count the total number of people with more steps than `threshold_goal`
 get_passed_people_num :: Table -> Int
-get_passed_people_num t = (foldr (\x acc -> if x >= threshold_goal then acc + 1 else acc) 0) $ (map compute_steps_for_row (tail t)) 
+get_passed_people_num t = foldr (\x acc -> if x >= threshold_goal then acc + 1 else acc) 0 (map compute_steps_for_row (tail t))
 
 -- Percentage of people who have achieved their goal
 get_passed_people_percentage :: Table -> Float
-get_passed_people_percentage t = (int2Float $ get_passed_people_num t) / (int2Float $ length t)
+get_passed_people_percentage t = int2Float (get_passed_people_num t) / int2Float (length t)
 
 -- Total number of steps (for all people)
 get_steps_total :: Table -> Float
-get_steps_total t = (foldr (\x total_steps -> total_steps + x) 0) $ (map compute_steps_for_row t)
+get_steps_total t = foldr (\x total_steps -> total_steps + x) 0 (map compute_steps_for_row t)
 
 -- Average number of steps (for all people)
 get_steps_avg :: Table -> Float
-get_steps_avg t = (get_steps_total (tail t)) / (int2Float $ (length t - 1))
+get_steps_avg t = (get_steps_total (tail t)) / (int2Float (length t - 1))
 
 
 -- Task 3
@@ -97,7 +97,7 @@ get_total_steps_per_h t = map compute_steps_for_row $ tail (transpose t)
 
 -- Compute the `average steps` for each hour (H10, H11, ..., H17) 
 get_avg_steps_per_h_list :: Table -> [Float]
-get_avg_steps_per_h_list t = foldr (\x acc -> (x / (int2Float $ (length t - 1))):acc) [] (get_total_steps_per_h t)
+get_avg_steps_per_h_list t = map (\ x -> x / (int2Float (length t - 1))) (get_total_steps_per_h t)
 
 -- Convert to the desired output
 float_list_to_row :: Table -> Row
@@ -109,7 +109,7 @@ steps_per_h_header = ["H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17"]
 
 -- Combine the `header` with computed `avearage steps`
 get_avg_steps_per_h :: Table -> Table
-get_avg_steps_per_h t = [steps_per_h_header] ++ [float_list_to_row t]
+get_avg_steps_per_h t = steps_per_h_header : [float_list_to_row t]
 
 
 -- Task 4
@@ -155,7 +155,7 @@ range3_group r = group_range range3_lo range3_hi (tail r)
 
 -- Group minutes based on the range
 group_minutes :: Row -> Row
-group_minutes r = [(head r), (show $ range1_group r), (show $ range2_group r), (show $ range3_group r)]
+group_minutes r = [head r, show (range1_group r), show (range2_group r), show (range3_group r)]
 
 -- `activ_summary` for each intensity (`VeryActiveMinutes`, `FairlyActiveMinutes`, `LightlyActiveMinutes`)
 activ_summary_intensity_VA :: Table -> Row
@@ -183,7 +183,7 @@ ranking_header = ["Name", "Total Steps"]
 
 -- Sort the people by comparing the total number of steps (second column in the table -> idx = 1)
 get_ranking :: Table -> Table
-get_ranking t = [ranking_header] ++ sortBy (\p1 p2 -> compare (read $ (p1 !! 1) :: Integer) (read $ (p2 !! 1) :: Integer)) (tail t)
+get_ranking t = ranking_header : sortBy (\p1 p2 -> compare (read (p1 !! 1) :: Integer) (read (p2 !! 1) :: Integer)) (tail t)
 
 
 -- Task 6
@@ -223,7 +223,7 @@ get_steps_diff l1 l2 = map abs (zipWith (-) l1 l2)
 
 -- Convert to the desired output: from [Float] to [String] (Row)
 float_list_to_row2 :: [Float] -> Row
-float_list_to_row2 = foldr (\x acc -> (printf "%.2f" x):acc) []
+float_list_to_row2 = map (printf "%.2f")
 
 -- Let's compute the columns of the final table
 diff_table_first4h :: Table -> Row
@@ -239,7 +239,7 @@ compute_4_rows_table t = transpose ([get_steps_names t] ++ [diff_table_first4h t
 
 -- Sort the `final table` based on the `diff` column (idx = 3) and append the header
 get_steps_diff_table :: Table -> Table
-get_steps_diff_table t = [steps_diff_table_header] ++ sortBy (\p1 p2 -> compare (read $ (p1 !! 3) :: Float) (read $ (p2 !! 3) :: Float)) (compute_4_rows_table (tail t))
+get_steps_diff_table t = steps_diff_table_header : sortBy (\p1 p2 -> compare (read (p1 !! 3) :: Float) (read (p2 !! 3) :: Float)) (compute_4_rows_table (tail t))
 
 
 -- Task 7
@@ -256,12 +256,11 @@ table_test_task7 =
 
 -- Applies the given function (f) to all the values from the table (t)
 vmap :: (Value -> Value) -> Table -> Table
-vmap f t = map (vmap_row f) t where
-    vmap_row f = foldr (\row acc -> (f row):acc) []
+vmap f = map (map f)
 
--- This function will replace the null string "" with "NaN" (similar to pandas)
+-- This function will replace the null string "" with "NaN" (similar to pandas framework)
 f_test :: Value -> Value
-f_test = (\x -> if x == "" then "NaN" else x)
+f_test x = if x == "" then "NaN" else x
 
 -- Tester function
 vmap_test :: Table
@@ -269,7 +268,7 @@ vmap_test = vmap f_test table_test_task7
 
 
 -- Task 8
--- Implement a function which applies a function to all entries (rows) in a table --
+-- Implement a function which applies a function (f) to all rows, then add a column to the table --
 table_test_task8 :: Table
 table_test_task8 =
     [["Olivia Noah","373","160","151"],
@@ -285,7 +284,7 @@ table_test_task8 =
 -- Then remove the first column of the table
 -- Lastly, merge the table with the given [String] `s` 
 rmap :: (Row -> Row) -> [String] -> Table -> Table
-rmap f s t = zipWith (:) s $ map (tail) $ (map f t)
+rmap f s t = zipWith (:) s $ map (tail . f) t
 
 -- Customizable `threshold`
 threshold_length :: Int
@@ -304,4 +303,4 @@ get_total_slept_mins = foldr (\x acc -> (read x :: Float) + acc) 0
 
 -- Merge the header (`email`) with the computed `total_slept_mins`, printing with 2 decimal places
 get_sleep_total :: Row -> Row
-get_sleep_total r = [head r] ++ [printf "%.2f" $ get_total_slept_mins (tail r)]
+get_sleep_total r = head r : [printf "%.2f" $ get_total_slept_mins (tail r)]

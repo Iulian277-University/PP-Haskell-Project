@@ -6,14 +6,9 @@
 
     DO NOT MODIFY THIS FILE! If you suspect that anything is wrong, post on FORUM!!
 -}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use camelCase" #-}
-
-
 module Dataset where
 
-emails = 
-    [["Name","Email"],
+emails = [["Name","Email"],
     ["Olivia Noah","Olivia.Noah@stud.cs.pub.ro"],
     ["Riley Jackson","Riley.Jackson@stud.cs.pub.ro"],
     ["Emma Aiden","Emma.Aiden@stud.cs.pub.ro"],
@@ -189,8 +184,7 @@ emails =
     ["Easton Liliana","Easton.Liliana@stud.cs.pub.ro"],
     ["Joshua Kennedy","Joshua.Kennedy@stud.cs.pub.ro"]]
 
-eight_hours =
-    [["Name","10","11","12","13","14","15","16","17"],
+eight_hours = [["Name","10","11","12","13","14","15","16","17"],
     ["Olivia Noah","373","160","151","0","0","0","0","0"],
     ["Riley Jackson","31","0","0","7","0","0","0","0"],
     ["Emma Aiden","45","8","0","0","0","0","0","0"],
@@ -324,8 +318,7 @@ eight_hours =
     ["Easton Liliana","0","316","169","405","440","137","265","0"],
     ["Joshua Kennedy","183","75","419","0","1112","0","0","0"]]
 
-physical_activity =
-    [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
+physical_activity = [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
     ["Olivia Noah","13162","8.50","25","13","328"],
     ["Riley Jackson","10735","6.97","21","19","217"],
     ["Emma Aiden","10460","6.74","30","11","181"],
@@ -501,8 +494,7 @@ physical_activity =
     ["Easton Liliana","18387","12.91","13","23","361"],
     ["Joshua Kennedy","10538","7.40","25","28","245"]]
 
-sleep_min =
-    [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"],
+sleep_min = [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"],
     ["Mason.Zoe@stud.cs.pub.ro","327","384","412","340","700","304","360"],
     ["Ian.Brooklyn@stud.cs.pub.ro","119","124","796","137","0","0","0"],
     ["Lucy.Dylan@stud.cs.pub.ro","644","722","590","0","0","0","0"],

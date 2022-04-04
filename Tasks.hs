@@ -171,7 +171,10 @@ activ_summary_header = ["column", "range1", "range2", "range3"]
 
 -- Compute the desired output using all the above functions
 get_activ_summary :: Table -> Table
-get_activ_summary t = [activ_summary_header, activ_summary_intensity_VA t, activ_summary_intensity_FA t, activ_summary_intensity_LA t]
+get_activ_summary t = [activ_summary_header,
+    activ_summary_intensity_VA t,
+    activ_summary_intensity_FA t,
+    activ_summary_intensity_LA t]
 
 
 -- Task 5
@@ -183,7 +186,8 @@ ranking_header = ["Name", "Total Steps"]
 
 -- Sort the people by comparing the total number of steps (second column in the table -> idx = 1)
 get_ranking :: Table -> Table
-get_ranking t = ranking_header : sortBy (\p1 p2 -> compare (read (p1 !! 1) :: Integer) (read (p2 !! 1) :: Integer)) (tail t)
+get_ranking t = ranking_header : 
+    sortBy (\p1 p2 -> compare (read (p1 !! 1) :: Integer) (read (p2 !! 1) :: Integer)) (map (take 2) (tail t))
 
 
 -- Task 6

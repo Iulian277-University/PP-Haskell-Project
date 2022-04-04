@@ -35,11 +35,15 @@ task6 = ("Task 6", [
         expect (get_steps_diff_table D.eight_hours) toBeSorted R.task6
     ])
 
+task7 = ("Task 7", [
+        expect (vmap (show . length) D.emails) toBeSorted R.task7
+    ])
+
 task8 = ("Task 8", [
         expect (get_sleep_total $ head $ tail $ D.sleep_min) toBeSorted R.task8
     ])
 
-taskSets = [task1, task2, task3, task4, task5, task6, task8]
+taskSets = [task1, task2, task3, task4, task5, task6, task7, task8]
 
 main :: IO ()
 main = do

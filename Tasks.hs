@@ -72,7 +72,8 @@ threshold_goal = 1000
 
 -- Count the total number of people with more steps than `threshold_goal`
 get_passed_people_num :: Table -> Int
-get_passed_people_num t = foldr (\x acc -> if x >= threshold_goal then acc + 1 else acc) 0 (map compute_steps_for_row (tail t))
+get_passed_people_num t = foldr 
+    (\x acc -> if x >= threshold_goal then acc + 1 else acc) 0 (map compute_steps_for_row (tail t))
 
 -- Percentage of people who have achieved their goal
 get_passed_people_percentage :: Table -> Float
@@ -135,7 +136,8 @@ range3_hi = 500
 -- FairlyActiveMinutes  - at pos (length (head t) - 2)
 -- LightlyActiveMinutes - at pos (length (head t) - 1)
 
--- Functions which takes a current value `x`, an `acc`, 2 `interval limits` and returns 1 if the `x` is in range and 0 otherwise
+-- Functions which takes a current value `x`, an `acc`, 2 `interval limits`
+-- and returns 1 if the `x` is in range and 0 otherwise
 check_in_range :: Value -> Integer -> Integer -> Integer -> Integer
 check_in_range x acc range_lo range_hi = if ((read x :: Integer) >= range_lo) && ((read x :: Integer) < range_hi)
     then acc + 1
@@ -239,11 +241,13 @@ diff_table_diff t = float_list_to_row2 $ get_steps_diff (get_steps_first4h t) (g
 
 -- Merge all the columns and generate the table
 compute_4_rows_table :: Table -> Table
-compute_4_rows_table t = transpose ([get_steps_names t] ++ [diff_table_first4h t] ++ [diff_table_last4h t] ++ [diff_table_diff t])
+compute_4_rows_table t = transpose 
+    ([get_steps_names t] ++ [diff_table_first4h t] ++ [diff_table_last4h t] ++ [diff_table_diff t])
 
 -- Sort the `final table` based on the `diff` column (idx = 3) and append the header
 get_steps_diff_table :: Table -> Table
-get_steps_diff_table t = steps_diff_table_header : sortBy (\p1 p2 -> compare (read (p1 !! 3) :: Float) (read (p2 !! 3) :: Float)) (compute_4_rows_table (tail t))
+get_steps_diff_table t = steps_diff_table_header :
+    sortBy (\p1 p2 -> compare (read (p1 !! 3) :: Float) (read (p2 !! 3) :: Float)) (compute_4_rows_table (tail t))
 
 
 -- Task 7
@@ -293,11 +297,15 @@ rmap f s t = zipWith (:) s $ map (tail . f) t
 -- Customizable `threshold`
 threshold_length :: Int
 threshold_length = 5
--- This function appends (at the end) "Big" if the row has more than a `threshold_length` elements and "Small" otherwise
+-- This function appends (at the end) "Big" if the row has more
+--than a `threshold_length` elements and "Small" otherwise
 f_row_test :: Row -> Row
-f_row_test r = if length r > threshold_length then reverse("Big":(reverse r)) else reverse("Small":(reverse r))
+f_row_test r = if length r > threshold_length
+    then reverse("Big":(reverse r))
+    else reverse("Small":(reverse r))
 
--- Apply the function `f_row_test` to the table `table_test_task8` and change the column names with the given ones
+-- Apply the function `f_row_test` to the table `table_test_task8`
+-- and change the column names with the given ones
 rmap_test :: Table
 rmap_test = rmap f_row_test ["Name1", "Name2", "Name3", "Name4", "Name5", "Name6", "Name7"] table_test_task8
 
@@ -308,3 +316,4 @@ get_total_slept_mins = foldr (\x acc -> (read x :: Float) + acc) 0
 -- Merge the header (`email`) with the computed `total_slept_mins`, printing with 2 decimal places
 get_sleep_total :: Row -> Row
 get_sleep_total r = head r : [printf "%.2f" $ get_total_slept_mins (tail r)]
+

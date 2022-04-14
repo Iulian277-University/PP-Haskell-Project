@@ -333,18 +333,24 @@ get_sleep_total r = head r : [printf "%.2f" $ get_total_slept_mins (tail r)]
 physical_activity1 :: Table
 physical_activity1 =
     [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
-    ["Olivia Noah","1010","8.50","25","13","328"],
-    ["Riley Jackson","101","6.97","21","19","217"],
-    ["Emma Aiden","101","6.74","30","11","181"],
-    ["Ava Elijah","10","6.28","29","34","209"]]
+    ["Olivia Noah","13162","8.50","25","13","328"],
+    ["Riley Jackson","10735","6.97","21","19","217"],
+    ["Emma Aiden","10460","6.74","30","11","181"]]
 
+eight_hours1 :: Table
+eight_hours1 =
+    [["Name","10","11","12","13","14","15","16","17"],
+    ["Olivia Noah","373","160","151","0","0","0","0","0"],
+    ["Riley Jackson","31","0","0","7","0","0","0","0"],
+    ["Emma Aiden","45","8","0","0","0","0","0","0"],
+    ["Aria Lucas","0","0","0","0","0","0","0","0"],
+    ["Aaliyah Oliver","0","0","0","0","4","0","20","0"]]
+
+-- We are sure that the `column_name` is present in the table
 get_column_index :: ColumnName -> Table -> Int
 get_column_index c t = fromJust $ elemIndex c (head t)
 
--- compare_2_rows :: Row -> Row -> Ordering
--- compare_2_rows r1 r2 = undefined
-
--- [TODO]: Generalize this function
+-- [TODO]: Generalize this function more
 tsort :: ColumnName -> Table -> Table
 tsort c t =
     (head t) :
@@ -359,12 +365,19 @@ tsort c t =
 -- Task 2
 
 vunion :: Table -> Table -> Table
-vunion t1 t2 = undefined
+vunion t1 t2
+    | (head t1) /= (head t2) = t1
+    | otherwise = t1 ++ (tail t2)
 
 -- Task 3
 
+add_padding :: Table -> Int -> Table
+add_padding t r                              -- count the number of columns from table t
+    | length t < r = add_padding (t ++ [replicate (foldr (\x acc -> acc + 1) 0 (head t)) ""]) r
+    | otherwise = t
+
 hunion :: Table -> Table -> Table
-hunion t1 t2 = undefined
+hunion t1 t2 = zipWith (++) (add_padding t1 $ max (length t1) (length t2)) (add_padding t2 $ max (length t1) (length t2))
 
 -- Task 4
 
@@ -373,8 +386,13 @@ tjoin key_column t1 t2 = undefined
 
 -- Task 5
 
+cartesian_helper :: (Row -> Row -> Row) -> Row -> Table -> Table
+cartesian_helper new_row_function row_t1 t2 =
+    foldr (\row_t2 acc -> (new_row_function row_t1 row_t2) : acc) [] (tail t2)
+
 cartesian :: (Row -> Row -> Row) -> [ColumnName] -> Table -> Table -> Table
-cartesian new_row_function new_column_names t1 t2 = undefined
+cartesian new_row_function new_column_names t1 t2 =
+    new_column_names : foldr (\row_t1 acc -> (cartesian_helper new_row_function row_t1 t2) ++ acc) [] (tail t1)
 
 -- Task 6
 

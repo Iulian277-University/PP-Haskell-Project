@@ -16,7 +16,6 @@ import Text.Printf
 import Data.Array
 import GHC.Float (int2Float)
 import Data.Maybe
-import GHC.Exts.Heap (StgInfoTable(entry))
 
 type CSV = String
 type Value = String
@@ -329,40 +328,34 @@ get_sleep_total r = head r : [printf "%.2f" $ get_total_slept_mins (tail r)]
     TASK SET 2
 -}
 
--- Task 1
 physical_activity1 :: Table
 physical_activity1 =
     [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
     ["Olivia Noah","13162","8.50","25","13","328"],
     ["Riley Jackson","10735","6.97","21","19","217"],
-    ["Emma Aiden","10460","6.74","30","11","181"],
-    ["Ava Elijah","9762","6.28","29","34","209"],
-    ["Isabella Grayson","12669","8.16","36","10","221"],
-    ["Aria Lucas","9705","6.48","38","20","164"],
-    ["Aaliyah Oliver","13019","8.59","42","16","233"]]
+    ["Emma Aiden","10460","6.74","30","11","181"]]
 
 eight_hours1 :: Table
 eight_hours1 =
-    [["Name","10","11","12","13","14","15","16","17"],
-    ["Olivia Noah","373","160","151","0","0","0","0","0"],
-    ["Riley Jackson","31","0","0","7","0","0","0","0"],
-    ["Emma Aiden","45","8","0","0","0","0","0","0"],
-    ["Aria Lucas","0","0","0","0","0","0","0","0"],
-    ["Aaliyah Oliver","0","0","0","0","4","0","20","0"]]
+    [["Name","10","11","12","13","14","FairlyActiveMinutes","16","17"],
+    ["Olivia Noah","373","160","151","0","0","666","0","0"],
+    ["Aria Lucas","0","0","0","0","0","666","0","0"],
+    ["Aaliyah Oliver","0","0","0","0","4","666","20","0"],
+    ["Emma Aiden","45","8","0","0","0","666","0","0"]]
 
 -- We are sure that the `column_name` is present in the table
 get_column_index :: ColumnName -> Table -> Int
 get_column_index c t = fromJust $ elemIndex c (head t)
 
--- [TODO]: Generalize this function more
+-- Task 1
+-- [TODO]: Generalize this function
 tsort :: ColumnName -> Table -> Table
 tsort c t =
     (head t) :
     sortBy (\entry1 entry2 ->
         compare
             ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
-            ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0))
-    )
+            ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
     (tail t)
 
 
@@ -376,8 +369,8 @@ vunion t1 t2
 -- Task 3
 
 add_padding :: Table -> Int -> Table
-add_padding t r                              -- count the number of columns from table t
-    | length t < r = add_padding (t ++ [replicate (foldr (\x acc -> acc + 1) 0 (head t)) ""]) r
+add_padding t r                         -- number of cols from table t
+    | length t < r = add_padding (t ++ [replicate (length $ head t) ""]) r
     | otherwise = t
 
 hunion :: Table -> Table -> Table
@@ -385,8 +378,45 @@ hunion t1 t2 = zipWith (++) (add_padding t1 $ max (length t1) (length t2)) (add_
 
 -- Task 4
 
+-- We are sure that the `column_name` is present in the `row`
+get_column_index_from_row :: ColumnName -> Row -> Int
+get_column_index_from_row column_name row = fromJust $ elemIndex column_name row
+
+-- For each row from `t2`, compare the value `row_t1` with respect to the `key_column` index
+-- If they are the same, concatenate the rows (without the `key_column` from the second row)
+-- Otherwise, return only the empty list `[]` - This allows us to filter the empty lists from the final table
+tjoin_helper :: ColumnName -> Int -> Row -> Table -> Row
+tjoin_helper key_column key_idx_t1 row_t1 t2 =
+    foldr (\row_t2 acc ->
+        if (row_t2 !! (get_column_index key_column t2))    ==   (row_t1 !! key_idx_t1)
+            then row_t1 ++ (take (get_column_index_from_row     (row_t1 !! key_idx_t1) row_t2) row_t2 ++
+                           (drop (1 + get_column_index_from_row (row_t1 !! key_idx_t1) row_t2) row_t2))
+            else acc
+    ) [] t2
+
+-- For each row from `t1`, search through the rows of table `t2` for the column named `key_colum`
+tjoin_tables :: ColumnName -> Table -> Table -> Table
+tjoin_tables key_column t1 t2 =
+    filter (\row -> length row > 0)
+        (foldr (\row_t1 acc -> (tjoin_helper key_column (get_column_index key_column t1) row_t1 t2) : acc) [] t1)
+
+-- tjoin_override_helper :: ColumnName -> Table -> Table
+-- tjoin_override_helper col_name t = map (drop (1 + get_column_index col_name t)) (transpose t)
+
+tjoin_override :: Table -> Int -> Table
+tjoin_override t header_len_t1 =
+    transpose $
+    foldr (\row acc ->
+        if ((length (head acc)) < header_len_t1) &&
+            ((head row) `elem` (drop (1 + get_column_index_from_row (head row) ((head t))) (head t)))
+                then acc -- 2 columns with the same name (one from the table `t1` and one from the table `t2`)
+                else row : acc -- no duplicate columns
+    ) [[]] (transpose t)
+
 tjoin :: ColumnName -> Table -> Table -> Table
-tjoin key_column t1 t2 = undefined
+tjoin key_column t1 t2
+    | (length $ head $ tjoin_tables key_column t1 t2) == (length $ nub $ head $ tjoin_tables key_column t1 t2) = tjoin_tables key_column t1 t2
+    | otherwise = tjoin_override (tjoin_tables key_column t1 t2) (length $ head $ tjoin_tables key_column t1 t2)
 
 -- Task 5
 
@@ -410,12 +440,11 @@ projection_helper columns_to_extract t = foldr (\col table -> (map (!! (get_colu
 -- Otherwise, just transpose the result of the `helper` function to get the correct orientation of the table
 projection :: [ColumnName] -> Table -> Table
 projection columns_to_extract t
-    | length (projection_helper columns_to_extract t) == 1 = foldr (\x acc -> [x] : acc) [] (concat (projection_helper columns_to_extract t))
+    | length (projection_helper columns_to_extract t) == 1 = map (\x -> [x]) (concat (projection_helper columns_to_extract t))
     | otherwise = transpose (projection_helper columns_to_extract t)
-    
 
 -- Task 7
 
+-- For each row (entry), keep the entry if the condition is met
 filterTable :: (Value -> Bool) -> ColumnName -> Table -> Table
-filterTable condition key_column t = undefined
-
+filterTable condition key_column t = (head t) : (filter (\entry -> condition (entry !! (get_column_index key_column t))) (tail t))

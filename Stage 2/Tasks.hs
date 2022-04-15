@@ -75,7 +75,7 @@ threshold_goal = 1000
 
 -- Count the total number of people with more steps than `threshold_goal`
 get_passed_people_num :: Table -> Int
-get_passed_people_num t = foldr 
+get_passed_people_num t = foldr
     (\x acc -> if x >= threshold_goal then acc + 1 else acc) 0 (map compute_steps_for_row (tail t))
 
 -- Percentage of people who have achieved their goal
@@ -191,7 +191,7 @@ ranking_header = ["Name", "Total Steps"]
 
 -- Sort the people by comparing the total number of steps (second column in the table -> idx = 1)
 get_ranking :: Table -> Table
-get_ranking t = ranking_header : 
+get_ranking t = ranking_header :
     sortBy (\p1 p2 -> compare (read (p1 !! 1) :: Integer) (read (p2 !! 1) :: Integer)) (map (take 2) (tail t))
 
 
@@ -244,7 +244,7 @@ diff_table_diff t = float_list_to_row2 $ get_steps_diff (get_steps_first4h t) (g
 
 -- Merge all the columns and generate the table
 compute_4_rows_table :: Table -> Table
-compute_4_rows_table t = transpose 
+compute_4_rows_table t = transpose
     ([get_steps_names t] ++ [diff_table_first4h t] ++ [diff_table_last4h t] ++ [diff_table_diff t])
 
 -- Sort the `final table` based on the `diff` column (idx = 3) and append the header
@@ -335,7 +335,11 @@ physical_activity1 =
     [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
     ["Olivia Noah","13162","8.50","25","13","328"],
     ["Riley Jackson","10735","6.97","21","19","217"],
-    ["Emma Aiden","10460","6.74","30","11","181"]]
+    ["Emma Aiden","10460","6.74","30","11","181"],
+    ["Ava Elijah","9762","6.28","29","34","209"],
+    ["Isabella Grayson","12669","8.16","36","10","221"],
+    ["Aria Lucas","9705","6.48","38","20","164"],
+    ["Aaliyah Oliver","13019","8.59","42","16","233"]]
 
 eight_hours1 :: Table
 eight_hours1 =
@@ -355,7 +359,7 @@ tsort :: ColumnName -> Table -> Table
 tsort c t =
     (head t) :
     sortBy (\entry1 entry2 ->
-        compare 
+        compare
             ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
             ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0))
     )
@@ -386,18 +390,29 @@ tjoin key_column t1 t2 = undefined
 
 -- Task 5
 
+-- This function takes an `op`, a `row_t1` and the table `t2`
+-- Applies the `op` between `row_t1` and each row of table `t2`
 cartesian_helper :: (Row -> Row -> Row) -> Row -> Table -> Table
-cartesian_helper new_row_function row_t1 t2 =
-    foldr (\row_t2 acc -> (new_row_function row_t1 row_t2) : acc) [] (tail t2)
+cartesian_helper new_row_function row_t1 t2 = map (new_row_function row_t1) (tail t2)
 
+-- For each row from `t1` call the `cartesian_helper` function
 cartesian :: (Row -> Row -> Row) -> [ColumnName] -> Table -> Table -> Table
 cartesian new_row_function new_column_names t1 t2 =
     new_column_names : foldr (\row_t1 acc -> (cartesian_helper new_row_function row_t1 t2) ++ acc) [] (tail t1)
 
 -- Task 6
 
+-- General case for `projection` - it extracts only the given columns from the table `t`
+projection_helper :: [ColumnName] -> Table -> Table
+projection_helper columns_to_extract t = foldr (\col table -> (map (!! (get_column_index col t)) t) : table) [] columns_to_extract
+
+-- If the `columns_to_extract` has only one element, we need to convert from [[String]] to [[String],[String],...]
+-- Otherwise, just transpose the result of the `helper` function to get the correct orientation of the table
 projection :: [ColumnName] -> Table -> Table
-projection columns_to_extract t = undefined
+projection columns_to_extract t
+    | length (projection_helper columns_to_extract t) == 1 = foldr (\x acc -> [x] : acc) [] (concat (projection_helper columns_to_extract t))
+    | otherwise = transpose (projection_helper columns_to_extract t)
+    
 
 -- Task 7
 

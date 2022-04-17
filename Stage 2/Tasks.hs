@@ -100,7 +100,7 @@ get_total_steps_per_h t = map compute_steps_for_row $ tail (transpose t)
 
 -- Compute the `average steps` for each hour (H10, H11, ..., H17) 
 get_avg_steps_per_h_list :: Table -> [Float]
-get_avg_steps_per_h_list t = map (\ x -> x / (int2Float (length t - 1))) (get_total_steps_per_h t)
+get_avg_steps_per_h_list t = map (\x -> x / (int2Float (length t - 1))) (get_total_steps_per_h t)
 
 -- Convert to the desired output
 float_list_to_row :: Table -> Row
@@ -317,9 +317,7 @@ get_total_slept_mins = foldr (\x acc -> (read x :: Float) + acc) 0
 
 -- Merge the header (`email`) with the computed `total_slept_mins`, printing with 2 decimal places
 get_sleep_total :: Row -> Row
-get_sleep_total r = head r : [printf "%.2f" $ get_total_slept_mins (tail r)]
-
-
+get_sleep_total r = (head r) : [printf "%.2f" $ get_total_slept_mins (tail r)]
 
 
 
@@ -328,27 +326,14 @@ get_sleep_total r = head r : [printf "%.2f" $ get_total_slept_mins (tail r)]
     TASK SET 2
 -}
 
-physical_activity1 :: Table
-physical_activity1 =
-    [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
-    ["Olivia Noah","13162","8.50","25","13","328"],
-    ["Riley Jackson","10735","6.97","21","19","217"],
-    ["Emma Aiden","10460","6.74","30","11","181"]]
-
-eight_hours1 :: Table
-eight_hours1 =
-    [["Name","10","11","12","13","14","FairlyActiveMinutes","16","17"],
-    ["Olivia Noah","373","160","151","0","0","666","0","0"],
-    ["Aria Lucas","0","0","0","0","0","666","0","0"],
-    ["Aaliyah Oliver","0","0","0","0","4","666","20","0"],
-    ["Emma Aiden","45","8","0","0","0","666","0","0"]]
-
+-- Return the index of the first occurrence (if any) of value in the list
 -- We are sure that the `column_name` is present in the table
 get_column_index :: ColumnName -> Table -> Int
 get_column_index c t = fromJust $ elemIndex c (head t)
 
 -- Task 1
--- [TODO]: Generalize this function
+-- Sort ascending the table `t` based on a column `c`
+-- If multiple entries have the same values, then it's sorted by the first column 
 tsort :: ColumnName -> Table -> Table
 tsort c t =
     (head t) :
@@ -360,24 +345,30 @@ tsort c t =
 
 
 -- Task 2
-
+-- t1 = [[col_x1, col_x2, ...]] and t2 = [[col_y1, col_y2, ...]]
+-- if col_x* == col_y* then append rows_t2 to rows_t1
+-- otherwise = t1 remains unchanged
 vunion :: Table -> Table -> Table
 vunion t1 t2
     | (head t1) /= (head t2) = t1
     | otherwise = t1 ++ (tail t2)
 
--- Task 3
 
+-- Task 3
+-- Add padding ("") to a table `t` given the expected number of rows `r`
 add_padding :: Table -> Int -> Table
 add_padding t r                         -- number of cols from table t
     | length t < r = add_padding (t ++ [replicate (length $ head t) ""]) r
     | otherwise = t
 
+-- Extends each row of `t1` with a row of `t2`, adding the padding if necessary
 hunion :: Table -> Table -> Table
-hunion t1 t2 = zipWith (++) (add_padding t1 $ max (length t1) (length t2)) (add_padding t2 $ max (length t1) (length t2))
+hunion t1 t2 = zipWith (++)
+    (add_padding t1 $ max (length t1) (length t2))
+    (add_padding t2 $ max (length t1) (length t2))
+
 
 -- Task 4
-
 -- We are sure that the `column_name` is present in the `row`
 get_column_index_from_row :: ColumnName -> Row -> Int
 get_column_index_from_row column_name row = fromJust $ elemIndex column_name row
@@ -400,28 +391,29 @@ tjoin_tables key_column t1 t2 =
     filter (\row -> length row > 0)
         (foldr (\row_t1 acc -> (tjoin_helper key_column (get_column_index key_column t1) row_t1 t2) : acc) [] t1)
 
--- tjoin_override_helper :: ColumnName -> Table -> Table
--- tjoin_override_helper col_name t = map (drop (1 + get_column_index col_name t)) (transpose t)
-
-tjoin_override :: Table -> Int -> Table
-tjoin_override t header_len_t1 =
+-- Remove the columns from the `t1` if there is another column in the `t2` with the same name
+tjoin_override :: Table -> Table
+tjoin_override t =
     transpose $
     foldr (\row acc ->
-        if ((length (head acc)) < header_len_t1) &&
-            ((head row) `elem` (drop (1 + get_column_index_from_row (head row) ((head t))) (head t)))
-                then acc -- 2 columns with the same name (one from the table `t1` and one from the table `t2`)
-                else row : acc -- no duplicate columns
+        if (length (elemIndices (head row) (head t)) > 1)
+            then transpose (map (take (head $ elemIndices (head row) (head t))) t) ++
+                 transpose (map (drop (1 + (head $ elemIndices (head row) (head t)))) t)
+            else
+                acc
     ) [[]] (transpose t)
 
+-- Join 2 tables `t1` and `t2` with respect to a key (column name)
 tjoin :: ColumnName -> Table -> Table -> Table
 tjoin key_column t1 t2
-    | (length $ head $ tjoin_tables key_column t1 t2) == (length $ nub $ head $ tjoin_tables key_column t1 t2) = tjoin_tables key_column t1 t2
-    | otherwise = tjoin_override (tjoin_tables key_column t1 t2) (length $ head $ tjoin_tables key_column t1 t2)
+    | length (head $ tjoin_tables key_column t1 t2) == length (nub $ head $ tjoin_tables key_column t1 t2)
+                = tjoin_tables key_column t1 t2
+    | otherwise = tjoin_override (tjoin_tables key_column t1 t2)
+
 
 -- Task 5
-
--- This function takes an `op`, a `row_t1` and the table `t2`
--- Applies the `op` between `row_t1` and each row of table `t2`
+-- This function takes an operation `op`, a row `row_t1` and the table `t2`
+-- Applies the `op` between `row_t1` and each row of `t2`
 cartesian_helper :: (Row -> Row -> Row) -> Row -> Table -> Table
 cartesian_helper new_row_function row_t1 t2 = map (new_row_function row_t1) (tail t2)
 
@@ -431,10 +423,10 @@ cartesian new_row_function new_column_names t1 t2 =
     new_column_names : foldr (\row_t1 acc -> (cartesian_helper new_row_function row_t1 t2) ++ acc) [] (tail t1)
 
 -- Task 6
-
 -- General case for `projection` - it extracts only the given columns from the table `t`
 projection_helper :: [ColumnName] -> Table -> Table
-projection_helper columns_to_extract t = foldr (\col table -> (map (!! (get_column_index col t)) t) : table) [] columns_to_extract
+projection_helper columns_to_extract t =
+    foldr (\col table -> (map (!! (get_column_index col t)) t) : table) [] columns_to_extract
 
 -- If the `columns_to_extract` has only one element, we need to convert from [[String]] to [[String],[String],...]
 -- Otherwise, just transpose the result of the `helper` function to get the correct orientation of the table
@@ -444,7 +436,6 @@ projection columns_to_extract t
     | otherwise = transpose (projection_helper columns_to_extract t)
 
 -- Task 7
-
 -- For each row (entry), keep the entry if the condition is met
 filterTable :: (Value -> Bool) -> ColumnName -> Table -> Table
-filterTable condition key_column t = (head t) : (filter (\entry -> condition (entry !! (get_column_index key_column t))) (tail t))
+filterTable condition key_column t = (head t) : (filter (\row -> condition (row !! (get_column_index key_column t))) (tail t))

@@ -16,6 +16,7 @@ import Text.Printf
 import Data.Array
 import GHC.Float (int2Float)
 import Data.Maybe
+import Text.Read (readMaybe)
 
 type CSV = String
 type Value = String
@@ -335,14 +336,19 @@ get_column_index c t = fromJust $ elemIndex c (head t)
 -- Sort ascending the table `t` based on a column `c`
 -- If multiple entries have the same values, then it's sorted by the first column 
 tsort :: ColumnName -> Table -> Table
-tsort c t =
-    (head t) :
-    sortBy (\entry1 entry2 ->
-        compare
-            ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
-            ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
-    (tail t)
+tsort c t = (head t) : sortBy (\entry1 entry2 -> compare_aux entry1 entry2) (tail t)
+    where
+        compare_aux entry1 entry2
+            | (readMaybe (entry1 !! (get_column_index c t)) :: Maybe Double) == Nothing =
+                compare ((entry1 !! (get_column_index c t)), (entry1 !! 0))
+                        ((entry2 !! (get_column_index c t)), (entry2 !! 0))
+            | otherwise = 
+                 compare ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0)) 
+                         ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0))
 
+-- Base implementation
+-- ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
+-- ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
 
 -- Task 2
 -- t1 = [[col_x1, col_x2, ...]] and t2 = [[col_y1, col_y2, ...]]

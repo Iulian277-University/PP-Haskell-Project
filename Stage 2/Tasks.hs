@@ -332,6 +332,26 @@ get_sleep_total r = (head r) : [printf "%.2f" $ get_total_slept_mins (tail r)]
 get_column_index :: ColumnName -> Table -> Int
 get_column_index c t = fromJust $ elemIndex c (head t)
 
+
+eight_hours_21 = 
+    [["Name","10","11","12","13","14","15","16","17"],
+    ["Olivia Noah","373","160","151","0","0","0","0","0"],
+    ["Riley Jackson","31","0","0","7","0","0","0","0"],
+    ["Emma Aiden","45","8","0","0","0","0","0","0"],
+    ["Aria Lucas","0","0","0","0","0","0","0","0"],
+    ["Aaliyah Oliver","0","0","0","0","4","0","20","0"],
+    ["Amelia Caden","","0","0","0","0","0","0","847"],
+    ["Layla Muhammad","29","0","0","0","0","0","319","225"]]
+
+emails_21 = 
+    [["Name","Email"],
+    ["Olivia Noah","Olivia.Noah@stud.cs.pub.ro"],
+    ["Riley Jackson","Riley.Jackson@stud.cs.pub.ro"],
+    ["","Emma.Aiden@stud.cs.pub.ro"],
+    ["Eva Elijah","Ava.Elijah@stud.cs.pub.ro"],
+    ["Isabela Grayson","Emma.Aiden@stud.cs.pub.ro"],
+    ["Aria Lucas","Aria.Lucas@stud.cs.pub.ro"]]
+
 -- Task 1
 -- Sort ascending the table `t` based on a column `c`
 -- If multiple entries have the same values, then it's sorted by the first column 
@@ -339,16 +359,24 @@ tsort :: ColumnName -> Table -> Table
 tsort c t = (head t) : sortBy (\entry1 entry2 -> compare_aux entry1 entry2) (tail t)
     where
         compare_aux entry1 entry2
-            | (readMaybe (entry1 !! (get_column_index c t)) :: Maybe Double) == Nothing =
+            | entry1 !! (get_column_index c t) == "" = LT
+            | entry2 !! (get_column_index c t) == "" = GT
+            | (readMaybe (entry1 !! (get_column_index c t)) :: Maybe Double) == Nothing = -- strings
                 compare ((entry1 !! (get_column_index c t)), (entry1 !! 0))
                         ((entry2 !! (get_column_index c t)), (entry2 !! 0))
-            | otherwise = 
+            | otherwise = -- values
                  compare ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0)) 
                          ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0))
 
 -- Base implementation
--- ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
--- ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
+-- tsort :: ColumnName -> Table -> Table
+-- tsort c t =
+--     (head t) :
+--     sortBy (\entry1 entry2 ->
+--         compare
+--             ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
+--             ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
+--     (tail t)
 
 -- Task 2
 -- t1 = [[col_x1, col_x2, ...]] and t2 = [[col_y1, col_y2, ...]]

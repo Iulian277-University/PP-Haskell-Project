@@ -3,8 +3,6 @@
 
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "" #-}
 
 -- ==================================================
 
@@ -17,6 +15,8 @@ import Data.Array
 import GHC.Float (int2Float)
 import Data.Maybe
 import Text.Read (readMaybe)
+
+import Common
 
 type CSV = String
 type Value = String
@@ -332,26 +332,6 @@ get_sleep_total r = (head r) : [printf "%.2f" $ get_total_slept_mins (tail r)]
 get_column_index :: ColumnName -> Table -> Int
 get_column_index c t = fromJust $ elemIndex c (head t)
 
-
-eight_hours_21 = 
-    [["Name","10","11","12","13","14","15","16","17"],
-    ["Olivia Noah","373","160","151","0","0","0","0","0"],
-    ["Riley Jackson","31","0","0","7","0","0","0","0"],
-    ["Emma Aiden","45","8","0","0","0","0","0","0"],
-    ["Aria Lucas","0","0","0","0","0","0","0","0"],
-    ["Aaliyah Oliver","0","0","0","0","4","0","20","0"],
-    ["Amelia Caden","","0","0","0","0","0","0","847"],
-    ["Layla Muhammad","29","0","0","0","0","0","319","225"]]
-
-emails_21 = 
-    [["Name","Email"],
-    ["Olivia Noah","Olivia.Noah@stud.cs.pub.ro"],
-    ["Riley Jackson","Riley.Jackson@stud.cs.pub.ro"],
-    ["","Emma.Aiden@stud.cs.pub.ro"],
-    ["Eva Elijah","Ava.Elijah@stud.cs.pub.ro"],
-    ["Isabela Grayson","Emma.Aiden@stud.cs.pub.ro"],
-    ["Aria Lucas","Aria.Lucas@stud.cs.pub.ro"]]
-
 -- Task 1
 -- Sort ascending the table `t` based on a column `c`
 -- If multiple entries have the same values, then it's sorted by the first column 
@@ -367,16 +347,6 @@ tsort c t = (head t) : sortBy (\entry1 entry2 -> compare_aux entry1 entry2) (tai
             | otherwise = -- values
                  compare ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0)) 
                          ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0))
-
--- Base implementation
--- tsort :: ColumnName -> Table -> Table
--- tsort c t =
---     (head t) :
---     sortBy (\entry1 entry2 ->
---         compare
---             ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
---             ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
---     (tail t)
 
 -- Task 2
 -- t1 = [[col_x1, col_x2, ...]] and t2 = [[col_y1, col_y2, ...]]
@@ -401,12 +371,6 @@ hunion t1 t2 = zipWith (++)
     (add_padding t1 $ max (length t1) (length t2))
     (add_padding t2 $ max (length t1) (length t2))
 
--- Task 4
-
--- [["Name","Email"]
--- [["Name","10","11","12","13","14","15","16","17"]
--- [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"]
--- [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"]
 
 -- Task 4
 -- We are sure that the `column_name` is present in the `row`
@@ -451,7 +415,6 @@ tjoin key_column t1 t2
     | otherwise = tjoin_override (tjoin_tables key_column t1 t2)
 
 
-
 -- Task 5
 -- This function takes an operation `op`, a row `row_t1` and the table `t2`
 -- Applies the `op` between `row_t1` and each row of `t2`
@@ -480,3 +443,90 @@ projection columns_to_extract t
 -- For each row (entry), keep the entry if the condition is met
 filterTable :: (Value -> Bool) -> ColumnName -> Table -> Table
 filterTable condition key_column t = (head t) : (filter (\row -> condition (row !! (get_column_index key_column t))) (tail t))
+
+{-
+    TASK SET 3
+-}
+
+
+-- 3.1
+
+table_test_31 =
+    [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
+    ["Olivia Noah","13162","8.50","25","13","328"],
+    ["Riley Jackson","10735","6.97","21","19","217"],
+    ["Emma Aiden","10460","6.74","30","11","181"],
+    ["Ava Elijah","9762","6.28","29","34","209"],
+    ["Isabella Grayson","12669","8.16","36","10","221"]]
+
+data Query =
+    FromTable Table
+    | AsList String Query
+    | Sort String Query
+    | ValueMap (Value -> Value) Query
+    | RowMap (Row -> Row) [String] Query
+    | VUnion Query Query
+    | HUnion Query Query
+    | TableJoin String Query Query
+    | Cartesian (Row -> Row -> Row) [String] Query Query
+    | Projection [String] Query
+    -- | forall a. FEval a => Filter (FilterCondition a) Query -- 3.4
+    -- | Graph EdgeOp Query -- 3.5
+
+-- Enroll `QResult` in the class `Show`
+instance Show QResult where
+    show (List  l) = show l
+    show (Table t) = show t
+
+-- Evaluation class for `Query`
+class Eval a where
+    eval :: a -> QResult
+
+qresult_to_table :: QResult -> Table
+qresult_to_table (Table t) = t
+
+qresult_to_list :: QResult -> [String]
+qresult_to_list (List l) = l
+
+-- Enroll `Query` in class `Eval`
+instance Eval Query where
+    eval (FromTable t) = Table t
+    eval (AsList c q) = List  $ tail $ concat $ projection [c] (qresult_to_table (eval q))
+    eval (Sort c q) = Table $ tsort c (qresult_to_table (eval q))
+    eval (ValueMap op q) = Table $ vmap op (qresult_to_table (eval q))
+    eval (RowMap op colnames q) = Table $ colnames : (map op (tail $ qresult_to_table (eval q)))
+    eval (VUnion q1 q2) = Table $ vunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (HUnion q1 q2) = Table $ hunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (TableJoin c q1 q2) = Table $ tjoin c (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (Cartesian op colnames q1 q2) = Table $ cartesian op colnames (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (Projection colnames q) = Table $ projection colnames (qresult_to_table (eval q))
+
+
+-- 3.2 & 3.3
+
+-- type FilterOp = Row -> Bool
+
+-- data FilterCondition a =
+--     Eq String a |
+--     Lt String a |
+--     Gt String a |
+--     In String [a] |
+--     FNot (FilterCondition a) |
+--     FieldEq String String
+
+-- class FEval a where
+--     feval :: [String] -> (FilterCondition a) -> FilterOp
+
+-- -- 3.4
+
+-- -- where EdgeOp is defined:
+-- type EdgeOp = Row -> Row -> Maybe Value
+
+-- -- 3.5
+-- similarities_query :: Query
+-- similarities_query = undefined
+
+-- -- 3.6 (Typos)
+-- correct_table :: String -> Table -> Table -> Table
+-- correct_table col csv1 csv2 = undefined
+

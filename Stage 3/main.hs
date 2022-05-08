@@ -97,19 +97,20 @@ task3_2 = ("Task 3.2", [
         expect (eval $ Filter ((FieldEq "TotalMinutesAsleep3" "TotalMinutesAsleep2")::(FilterCondition String)) (FromTable D.sleep_min)) toBe R.task3_3_6
     ])
 
--- edge_op1 (n1:l1:_) (n2:l2:_)
---             | l1 == l2 = Just l1
---             | otherwise = Nothing
 
--- edge_op2 l1 l2
---     | last l1 == last l2 = Just "identical"
---     | (abs $ (read (last l1) :: Float) - (read (last l1) :: Float)) < 50 = Just "similar"
---     | otherwise = Nothing
+edge_op1 (n1:l1:_) (n2:l2:_)
+            | l1 == l2 = Just l1
+            | otherwise = Nothing
 
--- task3_4 = ("Task 3.4", [
---         expect (eval $ Graph edge_op1 (FromTable D.physical_activity)) toBe R.task3_4_1,
---         expect (eval $ Graph edge_op2 (FromTable D.sleep_min)) toBe R.task3_4_2
---     ])
+edge_op2 l1 l2
+    | last l1 == last l2 = Just "identical"
+    | (abs $ (read (last l1) :: Float) - (read (last l1) :: Float)) < 50 = Just "similar"
+    | otherwise = Nothing
+
+task3_4 = ("Task 3.4", [
+        expect (eval $ Graph edge_op1 (FromTable D.physical_activity)) toBe R.task3_4_1,
+        expect (eval $ Graph edge_op2 (FromTable D.sleep_min)) toBe R.task3_4_2
+    ])
 
 -- task3_5 = ("Task 3.5", [
 --         expect (eval $ similarities_query) toBe R.task3_5
@@ -138,8 +139,8 @@ taskSets2 = M.fromList [
         ("2.7", task2_7),
 
         ("3.1", task3_1),
-        ("3.2", task3_2)
-        -- ("3.4", task3_4),
+        ("3.2", task3_2),
+        ("3.4", task3_4)
         -- ("3.5", task3_5),
         -- ("3.6", task3_6)
     ]

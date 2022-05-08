@@ -318,7 +318,8 @@ eight_hours = [["Name","10","11","12","13","14","15","16","17"],
     ["Easton Liliana","0","316","169","405","440","137","265","0"],
     ["Joshua Kennedy","183","75","419","0","1112","0","0","0"]]
 
-physical_activity = [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
+physical_activity = 
+    [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
     ["Olivia Noah","13162","8.50","25","13","328"],
     ["Riley Jackson","10735","6.97","21","19","217"],
     ["Emma Aiden","10460","6.74","30","11","181"],

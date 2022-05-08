@@ -471,7 +471,7 @@ data Query =
     | Cartesian (Row -> Row -> Row) [String] Query Query
     | Projection [String] Query
     | forall a. FEval a => Filter (FilterCondition a) Query -- 3.3
-    -- | Graph EdgeOp Query -- 3.4
+    | Graph EdgeOp Query -- 3.4
 
 -- Enroll `QResult` in the class `Show`
 instance Show QResult where
@@ -485,28 +485,30 @@ class Eval a where
 qresult_to_table :: QResult -> Table
 qresult_to_table (Table t) = t
 
-qresult_to_list :: QResult -> [String]
-qresult_to_list (List l) = l
+-- qresult_to_list :: QResult -> [String]
+-- qresult_to_list (List l) = l
 
 -- Enroll `Query` in class `Eval`
 instance Eval Query where
-    eval (FromTable t) = Table t
-    eval (AsList c q) = List  $ tail $ concat $ projection [c] (qresult_to_table (eval q))
-    eval (Sort c q) = Table $ tsort c (qresult_to_table (eval q))
-    eval (ValueMap op q) = Table $ vmap op (qresult_to_table (eval q))
-    eval (RowMap op colnames q) = Table $ colnames : (map op (tail $ qresult_to_table (eval q)))
-    eval (VUnion q1 q2) = Table $ vunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
-    eval (HUnion q1 q2) = Table $ hunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
-    eval (TableJoin c q1 q2) = Table $ tjoin c (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
-    eval (Cartesian op colnames q1 q2) = Table $ cartesian op colnames (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
-    eval (Projection colnames q) = Table $ projection colnames (qresult_to_table (eval q))
+    eval (FromTable t)                  = Table t
+    eval (AsList c q)                   = List  $ tail $ concat $ projection [c] (qresult_to_table (eval q))
+    eval (Sort c q)                     = Table $ tsort c (qresult_to_table (eval q))
+    eval (ValueMap op q)                = Table $ vmap op (qresult_to_table (eval q))
+    eval (RowMap op colnames q)         = Table $ colnames : (map op (tail $ qresult_to_table (eval q)))
+    eval (VUnion q1 q2)                 = Table $ vunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (HUnion q1 q2)                 = Table $ hunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (TableJoin c q1 q2)            = Table $ tjoin c (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (Cartesian op colnames q1 q2)  = Table $ cartesian op colnames (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (Projection colnames q)        = Table $ projection colnames (qresult_to_table (eval q))
     -- Implement `eval` for `Filter` query
     eval (Filter filter_cond q) = 
         Table $ ((head (qresult_to_table (eval q)))) : 
                 filter (feval (head (qresult_to_table (eval q))) filter_cond) (tail $ qresult_to_table (eval q))
+    -- Implement `eval` for `Graph` query
+    eval (Graph edgeop q) = Table $ graph edgeop (qresult_to_table (eval q))
 
 
--- 3.2 & 3.3 
+-- 3.2 & 3.3
 
 type FilterOp = Row -> Bool
 
@@ -544,14 +546,88 @@ instance FEval String where
         (row !! (get_column_index_from_row colname2 colnames))
 
 
--- -- 3.4
+-- 3.4
+tt :: Table
+tt = 
+    [
+    ["Name", "HoursSlept", "Category"],
+    ["Mihai",   "9",  "321"],
+    ["Andrei",  "8",  "322"],
+    ["",        "8",  "922"],
+    ["Stefan",  "10", "321"],
+    ["",        "10", "921"],
+    ["Ana",     "9",  "322"]
+    ]
 
--- -- where EdgeOp is defined:
--- type EdgeOp = Row -> Row -> Maybe Value
+tt2 :: Table
+tt2 =
+    [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"],
+    ["Mason.Zoe@stud.cs.pub.ro","327","384","412","340","700","304","360"],
+    ["Ian.Brooklyn@stud.cs.pub.ro","119","124","796","137","0","0","0"],
+    ["","644","722","590","0","0","0","0"],
+    ["Lucas.Aria@stud.cs.pub.ro","750","398","475","296","166","0","0"],
+    ["Joshua.Kennedy@stud.cs.pub.ro","503","531","545","523","524","437","498"],
+    ["Alexander.Ella@stud.cs.pub.ro","61","0","0","0","0","0","0"],
+    ["Kennedy.Joshua@stud.cs.pub.ro","467","445","452","556","500","465","460"]]
+
+-- where EdgeOp is defined:
+type EdgeOp = Row -> Row -> Maybe Value
+
+-- edge_op_1 (n1:l1:_) (n2:l2:_)
+--     | l1 == l2 = Just l1
+--     | otherwise = Nothing
+
+-- edge_op_2 [_,_,z] [_,_,c]
+--     | z == c = Just c
+--     | otherwise = Nothing
+
+-- edge_op_3 [_,x,_] [_,y,_]
+--    | (abs $ (read x :: Int) - (read y :: Int)) <= 1 = Just "similar"
+--    | otherwise = Nothing
+
+edge_op2 l1 l2
+    | last l1 == last l2 = Just "identical"
+    | (abs $ (read (last l1) :: Float) - (read (last l1) :: Float)) < 50 = Just "similar"
+    | otherwise = Nothing
+
+graph_header = ["From", "To", "Value"]
+
+
+graph_aux :: EdgeOp -> Row -> Table -> Table
+graph_aux edgeop row_t1 t =
+    foldr (\row_t2 acc -> if (edgeop row_t1 row_t2) == Nothing 
+        then acc 
+        else [[row_t1 !! 0, row_t2 !! 0, fromJust (edgeop row_t1 row_t2)]] ++ acc) [] (tail t)
+
+graph_helper :: EdgeOp -> Table -> Table
+graph_helper edgeop t = foldr (\row_t1 acc -> (graph_aux edgeop row_t1 (drop (fromJust $ elemIndex row_t1 t) t) ++ acc)) [] (tail t)
+
+-- ["From", "To", "Value"]
+graph_sorter :: Table -> Table
+graph_sorter t =
+    foldr (\row acc -> if ((row !! 0) > (row !! 1)) then ([row !! 1, row !! 0, row !! 2] : acc) else (row : acc)) [] t
+
+graph :: EdgeOp -> Table -> Table
+graph edgeop t = [graph_header] ++ graph_sorter (graph_helper edgeop t)
+
+
+-- Task 5
+-- This function takes an operation `op`, a row `row_t1` and the table `t2`
+-- Applies the `op` between `row_t1` and each row of `t2`
+-- cartesian_helper :: (Row -> Row -> Row) -> Row -> Table -> Table
+-- cartesian_helper new_row_function row_t1 t2 = map (new_row_function row_t1) (tail t2)
+
+-- -- For each row from `t1` call the `cartesian_helper` function
+-- cartesian :: (Row -> Row -> Row) -> [ColumnName] -> Table -> Table -> Table
+-- cartesian new_row_function new_column_names t1 t2 =
+--     new_column_names : foldr (\row_t1 acc -> (cartesian_helper new_row_function row_t1 t2) ++ acc) [] (tail t1)
+
 
 -- -- 3.5
 -- similarities_query :: Query
 -- similarities_query = undefined
+
+
 
 -- -- 3.6 (Typos)
 -- correct_table :: String -> Table -> Table -> Table

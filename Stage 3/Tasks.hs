@@ -506,7 +506,7 @@ instance Eval Query where
                 filter (feval (head (qresult_to_table (eval q))) filter_cond) (tail $ qresult_to_table (eval q))
 
 
--- 3.2 & 3.3
+-- 3.2 & 3.3 
 
 type FilterOp = Row -> Bool
 

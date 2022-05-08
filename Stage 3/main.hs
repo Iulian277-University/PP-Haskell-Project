@@ -88,14 +88,14 @@ task3_1 = ("Task 3.1", [
         expect (eval $ Projection ["Name", "TotalSteps"] $ FromTable D.physical_activity) toBe R.task3_1_9
     ])
 
--- task3_2 = ("Task 3.2", [
---         expect (eval $ Filter (Gt "TotalMinutesAsleep1" (read "119" :: Float)) (FromTable D.sleep_min)) toBe R.task3_3_1,
---         expect (eval $ Filter (Eq "Name" "Lily Luca") (FromTable D.physical_activity)) toBe R.task3_3_2,
---         expect (eval $ Filter (Lt "Name" "Brian") (FromTable D.physical_activity)) toBe R.task3_3_3,
---         expect (eval $ Filter (In "TotalMinutesAsleep4" [(read "515" :: Float), (read "99" :: Float)]) (FromTable D.sleep_min)) toBe R.task3_3_4,
---         expect (eval $ Filter (FNot $ Eq "TotalDistance" "6.81") (FromTable D.physical_activity)) toBe R.task3_3_5,
---         expect (eval $ Filter ((FieldEq "TotalMinutesAsleep3" "TotalMinutesAsleep2")::(FilterCondition String)) (FromTable D.sleep_min)) toBe R.task3_3_6
---     ])
+task3_2 = ("Task 3.2", [
+        expect (eval $ Filter (Gt "TotalMinutesAsleep1" (read "119" :: Float)) (FromTable D.sleep_min)) toBe R.task3_3_1,
+        expect (eval $ Filter (Eq "Name" "Lily Luca") (FromTable D.physical_activity)) toBe R.task3_3_2,
+        expect (eval $ Filter (Lt "Name" "Brian") (FromTable D.physical_activity)) toBe R.task3_3_3,
+        expect (eval $ Filter (In "TotalMinutesAsleep4" [(read "515" :: Float), (read "99" :: Float)]) (FromTable D.sleep_min)) toBe R.task3_3_4,
+        expect (eval $ Filter (FNot $ Eq "TotalDistance" "6.81") (FromTable D.physical_activity)) toBe R.task3_3_5,
+        expect (eval $ Filter ((FieldEq "TotalMinutesAsleep3" "TotalMinutesAsleep2")::(FilterCondition String)) (FromTable D.sleep_min)) toBe R.task3_3_6
+    ])
 
 -- edge_op1 (n1:l1:_) (n2:l2:_)
 --             | l1 == l2 = Just l1
@@ -137,8 +137,8 @@ taskSets2 = M.fromList [
         ("2.6", task2_6),
         ("2.7", task2_7),
 
-        ("3.1", task3_1)
-        -- ("3.2", task3_2),
+        ("3.1", task3_1),
+        ("3.2", task3_2)
         -- ("3.4", task3_4),
         -- ("3.5", task3_5),
         -- ("3.6", task3_6)

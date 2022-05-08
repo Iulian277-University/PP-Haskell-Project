@@ -470,8 +470,8 @@ data Query =
     | TableJoin String Query Query
     | Cartesian (Row -> Row -> Row) [String] Query Query
     | Projection [String] Query
-    -- | forall a. FEval a => Filter (FilterCondition a) Query -- 3.4
-    -- | Graph EdgeOp Query -- 3.5
+    | forall a. FEval a => Filter (FilterCondition a) Query -- 3.3
+    -- | Graph EdgeOp Query -- 3.4
 
 -- Enroll `QResult` in the class `Show`
 instance Show QResult where
@@ -500,22 +500,49 @@ instance Eval Query where
     eval (TableJoin c q1 q2) = Table $ tjoin c (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
     eval (Cartesian op colnames q1 q2) = Table $ cartesian op colnames (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
     eval (Projection colnames q) = Table $ projection colnames (qresult_to_table (eval q))
+    -- Implement `eval` for `Filter` query
+    eval (Filter filter_cond q) = 
+        Table $ ((head (qresult_to_table (eval q)))) : 
+                filter (feval (head (qresult_to_table (eval q))) filter_cond) (tail $ qresult_to_table (eval q))
 
 
 -- 3.2 & 3.3
 
--- type FilterOp = Row -> Bool
+type FilterOp = Row -> Bool
 
--- data FilterCondition a =
---     Eq String a |
---     Lt String a |
---     Gt String a |
---     In String [a] |
---     FNot (FilterCondition a) |
---     FieldEq String String
+data FilterCondition a =
+    Eq String a |
+    Lt String a |
+    Gt String a |
+    In String [a] |
+    FNot (FilterCondition a) |
+    FieldEq String String
 
--- class FEval a where
---     feval :: [String] -> (FilterCondition a) -> FilterOp
+class FEval a where
+    feval :: [String] -> (FilterCondition a) -> FilterOp
+
+-- Enroll `Float` (FilterCondition Float) in class `FEval`
+instance FEval Float where
+    feval colnames (Eq colname ref)   row = (read (row !! (get_column_index_from_row colname colnames)) :: Float) == ref
+    feval colnames (Lt colname ref)   row = (read (row !! (get_column_index_from_row colname colnames)) :: Float)  < ref
+    feval colnames (Gt colname ref)   row = (read (row !! (get_column_index_from_row colname colnames)) :: Float)  > ref
+    feval colnames (In colname list)  row = elem (read (row !! (get_column_index_from_row colname colnames)) :: Float) list
+    feval colnames (FNot filter_cond) row = not (feval colnames filter_cond row)
+    feval colnames (FieldEq colname1 colname2) row =
+        (read (row !! (get_column_index_from_row colname1 colnames)) :: Float) == 
+        (read (row !! (get_column_index_from_row colname2 colnames)) :: Float)
+
+-- Enroll `String` (FilterCondition String) in class `FEval`
+instance FEval String where
+    feval colnames (Eq colname ref)   row = (row !! (get_column_index_from_row colname colnames)) == ref
+    feval colnames (Lt colname ref)   row = (row !! (get_column_index_from_row colname colnames))  < ref
+    feval colnames (Gt colname ref)   row = (row !! (get_column_index_from_row colname colnames))  > ref
+    feval colnames (In colname list)  row = elem (row !! (get_column_index_from_row colname colnames)) list
+    feval colnames (FNot filter_cond) row = not (feval colnames filter_cond row) 
+    feval colnames (FieldEq colname1 colname2) row =
+        (row !! (get_column_index_from_row colname1 colnames)) ==
+        (row !! (get_column_index_from_row colname2 colnames))
+
 
 -- -- 3.4
 

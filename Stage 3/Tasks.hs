@@ -485,9 +485,6 @@ class Eval a where
 qresult_to_table :: QResult -> Table
 qresult_to_table (Table t) = t
 
--- qresult_to_list :: QResult -> [String]
--- qresult_to_list (List l) = l
-
 -- Enroll `Query` in class `Eval`
 instance Eval Query where
     eval (FromTable t)                  = Table t
@@ -500,11 +497,11 @@ instance Eval Query where
     eval (TableJoin c q1 q2)            = Table $ tjoin c (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
     eval (Cartesian op colnames q1 q2)  = Table $ cartesian op colnames (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
     eval (Projection colnames q)        = Table $ projection colnames (qresult_to_table (eval q))
-    -- Implement `eval` for `Filter` query
+
     eval (Filter filter_cond q) = 
         Table $ ((head (qresult_to_table (eval q)))) : 
                 filter (feval (head (qresult_to_table (eval q))) filter_cond) (tail $ qresult_to_table (eval q))
-    -- Implement `eval` for `Graph` query
+
     eval (Graph edgeop q) = Table $ graph edgeop (qresult_to_table (eval q))
 
 
@@ -525,38 +522,38 @@ class FEval a where
 
 -- Enroll `Float` (FilterCondition Float) in class `FEval`
 instance FEval Float where
-    feval colnames (Eq colname ref)   row = (read (row !! (get_column_index_from_row colname colnames)) :: Float) == ref
-    feval colnames (Lt colname ref)   row = (read (row !! (get_column_index_from_row colname colnames)) :: Float)  < ref
-    feval colnames (Gt colname ref)   row = (read (row !! (get_column_index_from_row colname colnames)) :: Float)  > ref
-    feval colnames (In colname list)  row = elem (read (row !! (get_column_index_from_row colname colnames)) :: Float) list
-    feval colnames (FNot filter_cond) row = not (feval colnames filter_cond row)
-    feval colnames (FieldEq colname1 colname2) row =
+    feval colnames (Eq colname ref)   = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float) == ref
+    feval colnames (Lt colname ref)   = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float)  < ref
+    feval colnames (Gt colname ref)   = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float)  > ref
+    feval colnames (In colname list)  = \row -> elem (read (row !! (get_column_index_from_row colname colnames)) :: Float) list
+    feval colnames (FNot filter_cond) = \row -> not (feval colnames filter_cond row)
+    feval colnames (FieldEq colname1 colname2) = \row ->
         (read (row !! (get_column_index_from_row colname1 colnames)) :: Float) == 
         (read (row !! (get_column_index_from_row colname2 colnames)) :: Float)
 
 -- Enroll `String` (FilterCondition String) in class `FEval`
 instance FEval String where
-    feval colnames (Eq colname ref)   row = (row !! (get_column_index_from_row colname colnames)) == ref
-    feval colnames (Lt colname ref)   row = (row !! (get_column_index_from_row colname colnames))  < ref
-    feval colnames (Gt colname ref)   row = (row !! (get_column_index_from_row colname colnames))  > ref
-    feval colnames (In colname list)  row = elem (row !! (get_column_index_from_row colname colnames)) list
-    feval colnames (FNot filter_cond) row = not (feval colnames filter_cond row) 
-    feval colnames (FieldEq colname1 colname2) row =
+    feval colnames (Eq colname ref)   = \row -> (row !! (get_column_index_from_row colname colnames)) == ref
+    feval colnames (Lt colname ref)   = \row -> (row !! (get_column_index_from_row colname colnames))  < ref
+    feval colnames (Gt colname ref)   = \row -> (row !! (get_column_index_from_row colname colnames))  > ref
+    feval colnames (In colname list)  = \row -> elem (row !! (get_column_index_from_row colname colnames)) list
+    feval colnames (FNot filter_cond) = \row -> not (feval colnames filter_cond row) 
+    feval colnames (FieldEq colname1 colname2) = \row ->
         (row !! (get_column_index_from_row colname1 colnames)) ==
         (row !! (get_column_index_from_row colname2 colnames))
 
 
 -- 3.4
-tt :: Table
-tt = 
+tt1 :: Table
+tt1 = 
     [
     ["Name", "HoursSlept", "Category"],
-    ["Mihai",   "9",  "321"],
-    ["Andrei",  "8",  "322"],
-    ["",        "8",  "922"],
-    ["Stefan",  "10", "321"],
-    ["",        "10", "921"],
-    ["Ana",     "9",  "322"]
+    ["Mihai",   "9",          "321"],
+    ["Andrei",  "8",          "322"],
+    ["",        "8",          "922"],
+    ["Stefan",  "10",         "321"],
+    ["",        "10",         "921"],
+    ["Ana",     "9",          "322"]
     ]
 
 tt2 :: Table
@@ -585,13 +582,12 @@ type EdgeOp = Row -> Row -> Maybe Value
 --    | (abs $ (read x :: Int) - (read y :: Int)) <= 1 = Just "similar"
 --    | otherwise = Nothing
 
-edge_op2 l1 l2
-    | last l1 == last l2 = Just "identical"
-    | (abs $ (read (last l1) :: Float) - (read (last l1) :: Float)) < 50 = Just "similar"
-    | otherwise = Nothing
+-- edge_op_4 l1 l2
+--     | last l1 == last l2 = Just "identical"
+--     | (abs $ (read (last l1) :: Float) - (read (last l1) :: Float)) < 50 = Just "similar"
+--     | otherwise = Nothing
 
 graph_header = ["From", "To", "Value"]
-
 
 graph_aux :: EdgeOp -> Row -> Table -> Table
 graph_aux edgeop row_t1 t =
@@ -610,23 +606,38 @@ graph_sorter t =
 graph :: EdgeOp -> Table -> Table
 graph edgeop t = [graph_header] ++ graph_sorter (graph_helper edgeop t)
 
-
--- Task 5
--- This function takes an operation `op`, a row `row_t1` and the table `t2`
--- Applies the `op` between `row_t1` and each row of `t2`
--- cartesian_helper :: (Row -> Row -> Row) -> Row -> Table -> Table
--- cartesian_helper new_row_function row_t1 t2 = map (new_row_function row_t1) (tail t2)
-
--- -- For each row from `t1` call the `cartesian_helper` function
--- cartesian :: (Row -> Row -> Row) -> [ColumnName] -> Table -> Table -> Table
--- cartesian new_row_function new_column_names t1 t2 =
---     new_column_names : foldr (\row_t1 acc -> (cartesian_helper new_row_function row_t1 t2) ++ acc) [] (tail t1)
+-- 3.5
+table_test_35 =
+    [["Name",           "10",   "11",   "12",   "13",   "14",   "15",   "16",   "17"],
+    ["Olivia Noah",     "373",  "160",  "151",  "0",    "0",    "0",    "0",    "0"],
+    ["Riley Jackson",   "0",    "0",    "0",    "7",    "0",    "0",    "0",    "0"],
+    ["Emma Aiden",      "0",    "8",    "0",    "0",    "0",    "0",    "0",    "0"],
+    ["",                "0",    "0",    "0",    "0",    "0",    "0",    "0",    "0"],
+    ["Aaliyah Oliver",  "0",    "0",    "0",    "0",    "4",    "0",    "20",   "0"],
+    ["",                "0",    "0",    "0",    "0",    "0",    "0",    "0",    "847"]]
 
 
--- -- 3.5
--- similarities_query :: Query
--- similarities_query = undefined
+-- compare_lists a = length . filter id . zipWith (==) a
+compare_lists :: [String] -> [String] -> Int
+compare_lists [] _ = 0
+compare_lists _ [] = 0
+compare_lists l1 l2 =
+    if (head l1 == head l2) then
+        1 + compare_lists (tail l1) (tail l2)
+    else
+        compare_lists (tail l1) (tail l2)
 
+
+edge_op_sim (n1:l1) (n2:l2)
+    | (compare_lists l1 l2 >= 5) = Just (show (compare_lists l1 l2) :: Value)
+    | otherwise = Nothing
+
+
+similarities_query :: Query
+similarities_query = Sort "Value" $ Filter (FNot $ Eq "To" "") $ Filter (FNot $ Eq "From" "") $ FromTable (graph edge_op_sim eight_hours)
+
+
+-- Filter (FNot $ Eq "TotalDistance" "6.81") (FromTable D.physical_activity)
 
 
 -- -- 3.6 (Typos)

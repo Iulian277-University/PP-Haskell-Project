@@ -450,15 +450,6 @@ filterTable condition key_column t = (head t) : (filter (\row -> condition (row 
 
 
 -- 3.1
-
-table_test_31 =
-    [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"],
-    ["Olivia Noah","13162","8.50","25","13","328"],
-    ["Riley Jackson","10735","6.97","21","19","217"],
-    ["Emma Aiden","10460","6.74","30","11","181"],
-    ["Ava Elijah","9762","6.28","29","34","209"],
-    ["Isabella Grayson","12669","8.16","36","10","221"]]
-
 data Query =
     FromTable Table
     | AsList String Query
@@ -499,14 +490,13 @@ instance Eval Query where
     eval (Projection colnames q)        = Table $ projection colnames (qresult_to_table (eval q))
 
     eval (Filter filter_cond q) = 
-        Table $ ((head (qresult_to_table (eval q)))) : 
+        Table $ (head $ qresult_to_table (eval q)) : 
                 filter (feval (head (qresult_to_table (eval q))) filter_cond) (tail $ qresult_to_table (eval q))
 
     eval (Graph edgeop q) = Table $ graph edgeop (qresult_to_table (eval q))
 
 
 -- 3.2 & 3.3
-
 type FilterOp = Row -> Bool
 
 data FilterCondition a =
@@ -544,80 +534,37 @@ instance FEval String where
 
 
 -- 3.4
-tt1 :: Table
-tt1 = 
-    [
-    ["Name", "HoursSlept", "Category"],
-    ["Mihai",   "9",          "321"],
-    ["Andrei",  "8",          "322"],
-    ["",        "8",          "922"],
-    ["Stefan",  "10",         "321"],
-    ["",        "10",         "921"],
-    ["Ana",     "9",          "322"]
-    ]
-
-tt2 :: Table
-tt2 =
-    [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"],
-    ["Mason.Zoe@stud.cs.pub.ro","327","384","412","340","700","304","360"],
-    ["Ian.Brooklyn@stud.cs.pub.ro","119","124","796","137","0","0","0"],
-    ["","644","722","590","0","0","0","0"],
-    ["Lucas.Aria@stud.cs.pub.ro","750","398","475","296","166","0","0"],
-    ["Joshua.Kennedy@stud.cs.pub.ro","503","531","545","523","524","437","498"],
-    ["Alexander.Ella@stud.cs.pub.ro","61","0","0","0","0","0","0"],
-    ["Kennedy.Joshua@stud.cs.pub.ro","467","445","452","556","500","465","460"]]
-
 -- where EdgeOp is defined:
 type EdgeOp = Row -> Row -> Maybe Value
 
--- edge_op_1 (n1:l1:_) (n2:l2:_)
---     | l1 == l2 = Just l1
---     | otherwise = Nothing
-
--- edge_op_2 [_,_,z] [_,_,c]
---     | z == c = Just c
---     | otherwise = Nothing
-
--- edge_op_3 [_,x,_] [_,y,_]
---    | (abs $ (read x :: Int) - (read y :: Int)) <= 1 = Just "similar"
---    | otherwise = Nothing
-
--- edge_op_4 l1 l2
---     | last l1 == last l2 = Just "identical"
---     | (abs $ (read (last l1) :: Float) - (read (last l1) :: Float)) < 50 = Just "similar"
---     | otherwise = Nothing
-
 graph_header = ["From", "To", "Value"]
 
+-- Given the row `row_t1`, for each row of table `t`:
+-- if the condition is met, then add that `edge` to the graph
 graph_aux :: EdgeOp -> Row -> Table -> Table
 graph_aux edgeop row_t1 t =
     foldr (\row_t2 acc -> if (edgeop row_t1 row_t2) == Nothing 
         then acc 
         else [[row_t1 !! 0, row_t2 !! 0, fromJust (edgeop row_t1 row_t2)]] ++ acc) [] (tail t)
 
+-- For each row `row_t1` from table `t`, call `graph_aux`
+-- on the table which begins from the next row of `row_t1`
 graph_helper :: EdgeOp -> Table -> Table
 graph_helper edgeop t = foldr (\row_t1 acc -> (graph_aux edgeop row_t1 (drop (fromJust $ elemIndex row_t1 t) t) ++ acc)) [] (tail t)
 
 -- ["From", "To", "Value"]
+-- "From" value should be lexicographically before "To" value ("interchange" them if needed) 
 graph_sorter :: Table -> Table
 graph_sorter t =
     foldr (\row acc -> if ((row !! 0) > (row !! 1)) then ([row !! 1, row !! 0, row !! 2] : acc) else (row : acc)) [] t
 
+-- Compute and sort the graph, then add the graph header
 graph :: EdgeOp -> Table -> Table
-graph edgeop t = [graph_header] ++ graph_sorter (graph_helper edgeop t)
+graph edgeop t = [graph_header] ++ nub (graph_sorter (graph_helper edgeop t))
 
 -- 3.5
-table_test_35 =
-    [["Name",           "10",   "11",   "12",   "13",   "14",   "15",   "16",   "17"],
-    ["Olivia Noah",     "373",  "160",  "151",  "0",    "0",    "0",    "0",    "0"],
-    ["Riley Jackson",   "0",    "0",    "0",    "7",    "0",    "0",    "0",    "0"],
-    ["Emma Aiden",      "0",    "8",    "0",    "0",    "0",    "0",    "0",    "0"],
-    ["",                "0",    "0",    "0",    "0",    "0",    "0",    "0",    "0"],
-    ["Aaliyah Oliver",  "0",    "0",    "0",    "0",    "4",    "0",    "20",   "0"],
-    ["",                "0",    "0",    "0",    "0",    "0",    "0",    "0",    "847"]]
-
-
--- compare_lists a = length . filter id . zipWith (==) a
+-- Compare 2 given rows (lists), using a tail-recursive approach
+-- Alternative implementation: compare_lists a = length . filter id . zipWith (==) a
 compare_lists :: [String] -> [String] -> Int
 compare_lists [] _ = 0
 compare_lists _ [] = 0
@@ -627,20 +574,92 @@ compare_lists l1 l2 =
     else
         compare_lists (tail l1) (tail l2)
 
-
+-- Define the `edge operation` used in the `similarities query`
 edge_op_sim (n1:l1) (n2:l2)
     | (compare_lists l1 l2 >= 5) = Just (show (compare_lists l1 l2) :: Value)
     | otherwise = Nothing
 
-
+-- Compute the `similarities query` by generating the graph,
+-- filtering the empty values from columns `From` and `To`,
+-- then perform an ascending sort based on the column `Value`
 similarities_query :: Query
-similarities_query = Sort "Value" $ Filter (FNot $ Eq "To" "") $ Filter (FNot $ Eq "From" "") $ FromTable (graph edge_op_sim eight_hours)
+similarities_query = Sort "Value"
+                    $ Filter (FNot $ Eq "From" "")
+                    $ Filter (FNot $ Eq "To" "")
+                    $ FromTable (graph edge_op_sim eight_hours)
+
+-- 3.6 (Typos)
+
+-- Column `Name` can be everywhere (it is not supposed to be the first column)
+-- Take the columns before the column `Name`, add the correct column names
+-- and then append the columns after the initial column `Name` 
+correct_table :: String -> Table -> Table -> Table
+correct_table col_name t1 t2 =
+    zipWith (++) 
+        (zipWith (++) ((map (take (get_column_index col_name t1)) t1)) ([col_name] : (correct_table_aux col_name t1 t2)))
+        (map (drop (1 + get_column_index col_name t1)) t1)
 
 
--- Filter (FNot $ Eq "TotalDistance" "6.81") (FromTable D.physical_activity)
+-- This function generates the `cartesian` between the columns of `t_wrong` and `t_good`
+-- Then computes the `levenshtein` table with most likely replacements
+-- After that, sorts those possible "correct_names" by the Levenshtein distance
+-- At the end, replace the column `Name` from the wrong table with the corrected names
+correct_table_aux :: String -> Table -> Table -> Table
+correct_table_aux col_name t1 t2 = 
+    replace_typos t1 t2 $
+    sort_only_typos $
+    compute_lev_table $
+    cartesian (++) ["Name_wrong", "Name_good"] (projection [col_name] t1) (projection [col_name] t2)
 
 
--- -- 3.6 (Typos)
--- correct_table :: String -> Table -> Table -> Table
--- correct_table col csv1 csv2 = undefined
+-- Calculate Levenshtein distance between 2 strings (DP approach)
+-- It uses memoization, because it's way faster than the tail-recursive method
+-- This implementation is a variation of the following reference
+-- Ref: https://en.wikipedia.org/wiki/Levenshtein_distance#Iterative_with_full_matrix
+levenshtein :: String -> String -> Int
+levenshtein x y = dp ! (m, n)
+    where
+        dp = listArray ((0, 0), (m, n)) [compute i j | i <- [0 .. m], j <- [0 .. n]]
+        compute i 0 = i -- source prefixes can be transformed into empty string by dropping all characters
+        compute 0 j = j -- target prefixes can be reached from empty source prefix by inserting every character
+        compute i j     -- compute the `dp` matrix
+            | x !! (i - 1) == y !! (j - 1) = (dp !) (i - 1, j - 1)
+            | otherwise = 1 + (minimum $ map (dp !) [(i - 1, j),      -- deletion
+                                                     (i    , j - 1),  -- insertion
+                                                     (i - 1, j - 1)]) -- substitution
+        m = length x
+        n = length y
 
+
+-- For each entry of the table `t_wrong`, compute the Levenshtein distance to each entry name from `t_good`
+lev_thresh = 2
+compute_lev_table :: Table -> Table
+compute_lev_table t = foldr (\row acc -> if (get_lev_dist row /= "") then (row ++ [get_lev_dist row]) : acc else acc) [] (tail t)
+    where get_lev_dist row
+            | (levenshtein (row !! 0) (row !! 1) /= 0) &&
+              (fromIntegral (levenshtein (row !! 0) (row !! 1))) <= (fromIntegral (length (row !! 0)) / (fromIntegral lev_thresh))
+                        = show $ levenshtein (row !! 0) (row !! 1)
+            | otherwise = []
+
+
+-- Sort typos by the smallest Levenshtein distance (Later I will select the first occurence)
+sort_only_typos :: Table -> Table
+sort_only_typos t = sortBy (\[c1,w1,l1] [c2,w2,l2] -> compare (c1, read l1 :: Float) (c2, read l2 :: Float)) t
+
+
+-- If there is already a perfect match, use that name
+-- If we can correct the typo, choose the first entry (we've already sorted  the entries by the smallest Levenshtein distance)
+-- If we can't correct the typo, use the initial misspelled name
+replace_typos_aux :: Row -> Table -> Table -> Table
+replace_typos_aux row_tw tg tc
+    | find (\row -> row_tw !! 0 == row !! 0) tg == Nothing =
+        if (find (\row -> row_tw !! 0 == row !! 0) tc) == Nothing
+            then [row_tw]
+            else [[(fromJust (find (\row -> row_tw !! 0 == row !! 0) tc)) !! 1]]
+    | otherwise = [row_tw]
+
+
+-- For each row of `t_wrong`, correct the `Name` (calling the `replace_typos_aux` function)
+--              t_wrong  t_good  t_changed
+replace_typos :: Table -> Table -> Table -> Table
+replace_typos tw tg tc = foldr (\row_tw acc -> (replace_typos_aux row_tw tg tc) ++ acc) [] (tail (projection ["Name"] tw))

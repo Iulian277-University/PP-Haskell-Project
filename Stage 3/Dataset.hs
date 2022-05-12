@@ -8,7 +8,8 @@
 -}
 module Dataset where
 
-emails = [["Name","Email"],
+emails = 
+    [["Name","Email"],
     ["Olivia Noah","Olivia.Noah@stud.cs.pub.ro"],
     ["Riley Jackson","Riley.Jackson@stud.cs.pub.ro"],
     ["Emma Aiden","Emma.Aiden@stud.cs.pub.ro"],

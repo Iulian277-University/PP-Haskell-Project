@@ -116,9 +116,9 @@ task3_5 = ("Task 3.5", [
         expect (eval $ similarities_query) toBe R.task3_5
     ])
 
--- task3_6 = ("Task 3.1", [
---         expect (correct_table "Name" D.emails D.physical_activity) toBe R.task3_6
---     ])
+task3_6 = ("Task 3.6", [
+        expect (correct_table "Name" D.emails D.physical_activity) toBe R.task3_6
+    ])
 
 taskSets2 = M.fromList [
         ("1.1", task1_1),
@@ -140,9 +140,9 @@ taskSets2 = M.fromList [
 
         ("3.1", task3_1),
         ("3.2", task3_2),
-        -- ("3.4", task3_4)
-        ("3.5", task3_5)
-        -- ("3.6", task3_6)
+        ("3.4", task3_4),
+        ("3.5", task3_5),
+        ("3.6", task3_6)
     ]
 
 main :: IO ()

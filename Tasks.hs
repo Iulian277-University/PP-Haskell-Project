@@ -4,6 +4,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# HLINT ignore "" #-}
 
 -- ==================================================
@@ -17,6 +18,8 @@ import Data.Array
 import GHC.Float (int2Float)
 import Data.Maybe
 import Text.Read (readMaybe)
+
+import Common
 
 type CSV = String
 type Value = String
@@ -332,26 +335,6 @@ get_sleep_total r = (head r) : [printf "%.2f" $ get_total_slept_mins (tail r)]
 get_column_index :: ColumnName -> Table -> Int
 get_column_index c t = fromJust $ elemIndex c (head t)
 
-
-eight_hours_21 = 
-    [["Name","10","11","12","13","14","15","16","17"],
-    ["Olivia Noah","373","160","151","0","0","0","0","0"],
-    ["Riley Jackson","31","0","0","7","0","0","0","0"],
-    ["Emma Aiden","45","8","0","0","0","0","0","0"],
-    ["Aria Lucas","0","0","0","0","0","0","0","0"],
-    ["Aaliyah Oliver","0","0","0","0","4","0","20","0"],
-    ["Amelia Caden","","0","0","0","0","0","0","847"],
-    ["Layla Muhammad","29","0","0","0","0","0","319","225"]]
-
-emails_21 = 
-    [["Name","Email"],
-    ["Olivia Noah","Olivia.Noah@stud.cs.pub.ro"],
-    ["Riley Jackson","Riley.Jackson@stud.cs.pub.ro"],
-    ["","Emma.Aiden@stud.cs.pub.ro"],
-    ["Eva Elijah","Ava.Elijah@stud.cs.pub.ro"],
-    ["Isabela Grayson","Emma.Aiden@stud.cs.pub.ro"],
-    ["Aria Lucas","Aria.Lucas@stud.cs.pub.ro"]]
-
 -- Task 1
 -- Sort ascending the table `t` based on a column `c`
 -- If multiple entries have the same values, then it's sorted by the first column 
@@ -365,18 +348,8 @@ tsort c t = (head t) : sortBy (\entry1 entry2 -> compare_aux entry1 entry2) (tai
                 compare ((entry1 !! (get_column_index c t)), (entry1 !! 0))
                         ((entry2 !! (get_column_index c t)), (entry2 !! 0))
             | otherwise = -- values
-                 compare ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0)) 
+                 compare ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
                          ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0))
-
--- Base implementation
--- tsort :: ColumnName -> Table -> Table
--- tsort c t =
---     (head t) :
---     sortBy (\entry1 entry2 ->
---         compare
---             ((read (entry1 !! (get_column_index c t)) :: Double), (entry1 !! 0))
---             ((read (entry2 !! (get_column_index c t)) :: Double), (entry2 !! 0)))
---     (tail t)
 
 -- Task 2
 -- t1 = [[col_x1, col_x2, ...]] and t2 = [[col_y1, col_y2, ...]]
@@ -401,12 +374,6 @@ hunion t1 t2 = zipWith (++)
     (add_padding t1 $ max (length t1) (length t2))
     (add_padding t2 $ max (length t1) (length t2))
 
--- Task 4
-
--- [["Name","Email"]
--- [["Name","10","11","12","13","14","15","16","17"]
--- [["Name","TotalSteps","TotalDistance","VeryActiveMinutes","FairlyActiveMinutes","LightlyActiveMinutes"]
--- [["Email","TotalMinutesAsleep1","TotalMinutesAsleep2","TotalMinutesAsleep3","TotalMinutesAsleep4","TotalMinutesAsleep5","TotalMinutesAsleep6","TotalMinutesAsleep7"]
 
 -- Task 4
 -- We are sure that the `column_name` is present in the `row`
@@ -451,7 +418,6 @@ tjoin key_column t1 t2
     | otherwise = tjoin_override (tjoin_tables key_column t1 t2)
 
 
-
 -- Task 5
 -- This function takes an operation `op`, a row `row_t1` and the table `t2`
 -- Applies the `op` between `row_t1` and each row of `t2`
@@ -480,3 +446,225 @@ projection columns_to_extract t
 -- For each row (entry), keep the entry if the condition is met
 filterTable :: (Value -> Bool) -> ColumnName -> Table -> Table
 filterTable condition key_column t = (head t) : (filter (\row -> condition (row !! (get_column_index key_column t))) (tail t))
+
+
+{-
+    TASK SET 3
+-}
+
+-- 3.1
+data Query =
+    FromTable Table
+    | AsList String Query
+    | Sort String Query
+    | ValueMap (Value -> Value) Query
+    | RowMap (Row -> Row) [String] Query
+    | VUnion Query Query
+    | HUnion Query Query
+    | TableJoin String Query Query
+    | Cartesian (Row -> Row -> Row) [String] Query Query
+    | Projection [String] Query
+    | forall a. FEval a => Filter (FilterCondition a) Query -- 3.3
+    | Graph EdgeOp Query -- 3.4
+
+-- Enroll `QResult` in the class `Show`
+instance Show QResult where
+    show (List  l) = show l
+    show (Table t) = show t
+
+-- Evaluation class for `Query`
+class Eval a where
+    eval :: a -> QResult
+
+qresult_to_table :: QResult -> Table
+qresult_to_table (List  l) = [l]
+qresult_to_table (Table t) = t
+
+-- Enroll `Query` in class `Eval`
+instance Eval Query where
+    eval (FromTable t)                  = Table t
+    eval (AsList c q)                   = List  $ tail $ concat $ projection [c] (qresult_to_table (eval q))
+    eval (Sort c q)                     = Table $ tsort c (qresult_to_table (eval q))
+    eval (ValueMap op q)                = Table $ vmap op (qresult_to_table (eval q))
+    eval (RowMap op colnames q)         = Table $ colnames : (map op (tail $ qresult_to_table (eval q)))
+    eval (VUnion q1 q2)                 = Table $ vunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (HUnion q1 q2)                 = Table $ hunion (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (TableJoin c q1 q2)            = Table $ tjoin c (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (Cartesian op colnames q1 q2)  = Table $ cartesian op colnames (qresult_to_table (eval q1)) (qresult_to_table (eval q2))
+    eval (Projection colnames q)        = Table $ projection colnames (qresult_to_table (eval q))
+
+    eval (Filter filter_cond q) =
+        Table $ head (qresult_to_table (eval q)) :
+                filter (feval (head (qresult_to_table (eval q))) filter_cond) (tail $ qresult_to_table (eval q))
+
+    eval (Graph edgeop q) = Table $ graph edgeop (qresult_to_table (eval q))
+
+
+-- 3.2 & 3.3
+type FilterOp = Row -> Bool
+
+data FilterCondition a =
+    Eq String a |
+    Lt String a |
+    Gt String a |
+    In String [a] |
+    FNot (FilterCondition a) |
+    FieldEq String String
+
+class FEval a where
+    feval :: [String] -> (FilterCondition a) -> FilterOp
+
+-- Enroll `Float` (FilterCondition Float) in class `FEval`
+instance FEval Float where
+    feval colnames (Eq colname ref)   = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float) == ref
+    feval colnames (Lt colname ref)   = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float)  < ref
+    feval colnames (Gt colname ref)   = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float)  > ref
+    feval colnames (In colname list)  = \row -> (read (row !! (get_column_index_from_row colname colnames)) :: Float) `elem` list
+    feval colnames (FNot filter_cond) = \row -> not (feval colnames filter_cond row)
+    feval colnames (FieldEq colname1 colname2) = \row ->
+        (read (row !! (get_column_index_from_row colname1 colnames)) :: Float) ==
+        (read (row !! (get_column_index_from_row colname2 colnames)) :: Float)
+
+-- Enroll `String` (FilterCondition String) in class `FEval`
+instance FEval String where
+    feval colnames (Eq colname ref)   = \row -> (row !! (get_column_index_from_row colname colnames)) == ref
+    feval colnames (Lt colname ref)   = \row -> (row !! (get_column_index_from_row colname colnames))  < ref
+    feval colnames (Gt colname ref)   = \row -> (row !! (get_column_index_from_row colname colnames))  > ref
+    feval colnames (In colname list)  = \row -> (row !! (get_column_index_from_row colname colnames)) `elem` list
+    feval colnames (FNot filter_cond) = \row -> not (feval colnames filter_cond row)
+    feval colnames (FieldEq colname1 colname2) = \row ->
+        (row !! (get_column_index_from_row colname1 colnames)) ==
+        (row !! (get_column_index_from_row colname2 colnames))
+
+
+-- 3.4
+-- where EdgeOp is defined:
+type EdgeOp = Row -> Row -> Maybe Value
+
+graph_header = ["From", "To", "Value"]
+
+-- Given the row `row_t1`, for each row of table `t`:
+-- if the condition is met, then add that `edge` to the graph
+graph_aux :: EdgeOp -> Row -> Table -> Table
+graph_aux edgeop row_t1 t =
+    foldr (\row_t2 acc -> if isNothing (edgeop row_t1 row_t2)
+        then acc
+        else [row_t1 !! 0, row_t2 !! 0, fromJust (edgeop row_t1 row_t2)] : acc) [] (tail t)
+
+-- For each row `row_t1` from table `t`, call `graph_aux`
+-- on the table which begins from the next row of `row_t1`
+graph_helper :: EdgeOp -> Table -> Table
+graph_helper edgeop t = foldr (\row_t1 acc -> (graph_aux edgeop row_t1 (drop (fromJust $ elemIndex row_t1 t) t) ++ acc)) [] (tail t)
+
+-- ["From", "To", "Value"]
+-- "From" value should be lexicographically before "To" value ("interchange" them if needed) 
+graph_sorter :: Table -> Table
+graph_sorter = foldr (\row acc -> if (row !! 0) > (row !! 1) then ([row !! 1, row !! 0, row !! 2] : acc) else (row : acc)) []
+
+-- Compute and sort the graph, then add the graph header
+graph :: EdgeOp -> Table -> Table
+graph edgeop t = graph_header : nub (graph_sorter (graph_helper edgeop t))
+
+
+-- 3.5
+-- Compare 2 given rows (lists), using a tail-recursive approach
+-- Alternative implementation: compare_lists a = length . filter id . zipWith (==) a
+compare_lists :: [String] -> [String] -> Int
+compare_lists [] _ = 0
+compare_lists _ [] = 0
+compare_lists l1 l2 =
+    if (head l1 == head l2) then
+        1 + compare_lists (tail l1) (tail l2)
+    else
+        compare_lists (tail l1) (tail l2)
+
+-- Define the `edge operation` used in the `similarities query`
+edge_op_sim (n1:l1) (n2:l2)
+    | (compare_lists l1 l2 >= 5) = Just (show (compare_lists l1 l2) :: Value)
+    | otherwise = Nothing
+
+-- Compute the `similarities query` by generating the graph,
+-- filtering the empty values from columns `From` and `To`,
+-- then perform an ascending sort based on the column `Value`
+similarities_query :: Query
+similarities_query = Sort "Value"
+                    $ Filter (FNot $ Eq "From" "")
+                    $ Filter (FNot $ Eq "To" "")
+                    $ FromTable (graph edge_op_sim eight_hours)
+
+
+-- 3.6 (Typos)
+
+-- Column `Name` can be everywhere (it is not supposed to be the first column)
+-- Take the columns before the column `Name`, add the correct column names
+-- and then append the columns after the initial column `Name` 
+correct_table :: String -> Table -> Table -> Table
+correct_table col_name t1 t2 =
+    zipWith (++)
+        (zipWith (++) ((map (take (get_column_index col_name t1)) t1)) ([col_name] : (correct_table_aux col_name t1 t2)))
+        (map (drop (1 + get_column_index col_name t1)) t1)
+
+
+-- This function generates the `cartesian` between the columns of `t_wrong` and `t_good`
+-- Then computes the `levenshtein` table with most likely replacements
+-- After that, sorts those possible "correct_names" by the Levenshtein distance
+-- At the end, replace the column `Name` from the wrong table with the corrected names
+correct_table_aux :: String -> Table -> Table -> Table
+correct_table_aux col_name t1 t2 =
+    replace_typos t1 t2 $
+    sort_only_typos $
+    compute_lev_table $
+    cartesian (++) ["Name_wrong", "Name_good"] (projection [col_name] t1) (projection [col_name] t2)
+
+
+-- Calculate Levenshtein distance between 2 strings (DP approach)
+-- It uses memoization, because it's way faster than the tail-recursive method
+-- This implementation is a variation of the following reference
+-- Ref: https://en.wikipedia.org/wiki/Levenshtein_distance#Iterative_with_full_matrix
+levenshtein :: String -> String -> Int
+levenshtein x y = dp ! (m, n)
+    where
+        dp = listArray ((0, 0), (m, n)) [compute i j | i <- [0 .. m], j <- [0 .. n]]
+        compute i 0 = i -- source prefixes can be transformed into empty string by dropping all characters
+        compute 0 j = j -- target prefixes can be reached from empty source prefix by inserting every character
+        compute i j     -- compute the `dp` matrix
+            | x !! (i - 1) == y !! (j - 1) = (dp !) (i - 1, j - 1)
+            | otherwise = 1 + minimum (map   (dp !) [(i - 1, j),      -- deletion
+                                                     (i    , j - 1),  -- insertion
+                                                     (i - 1, j - 1)]) -- substitution
+        m = length x
+        n = length y
+
+
+-- For each entry of the table `t_wrong`, compute the Levenshtein distance to each entry name from `t_good`
+lev_thresh = 2
+compute_lev_table :: Table -> Table
+compute_lev_table t = foldr (\row acc -> if (get_lev_dist row /= "") then (row ++ [get_lev_dist row]) : acc else acc) [] (tail t)
+    where get_lev_dist row
+            | (levenshtein (row !! 0) (row !! 1) /= 0) &&
+              (fromIntegral (levenshtein (row !! 0) (row !! 1))) <= (fromIntegral (length (row !! 0)) / (fromIntegral lev_thresh))
+                        = show $ levenshtein (row !! 0) (row !! 1)
+            | otherwise = []
+
+
+-- Sort typos by the smallest Levenshtein distance (Later I will select the first occurence)
+sort_only_typos :: Table -> Table
+sort_only_typos = sortBy (\[c1,w1,l1] [c2,w2,l2] -> compare (c1, read l1 :: Float) (c2, read l2 :: Float))
+
+
+-- If there is already a perfect match, use that name
+-- If we can correct the typo, choose the first entry (we've already sorted  the entries by the smallest Levenshtein distance)
+-- If we can't correct the typo, use the initial misspelled name
+replace_typos_aux :: Row -> Table -> Table -> Table
+replace_typos_aux row_tw tg tc
+    | isNothing (find (\row -> row_tw !! 0 == row !! 0) tg) =
+        if isNothing (find (\row -> row_tw !! 0 == row !! 0) tc)
+            then [row_tw]
+            else [[(fromJust (find (\row -> row_tw !! 0 == row !! 0) tc)) !! 1]]
+    | otherwise = [row_tw]
+
+
+-- For each row of `t_wrong`, correct the `Name` (calling the `replace_typos_aux` function)
+--              t_wrong  t_good  t_changed
+replace_typos :: Table -> Table -> Table -> Table
+replace_typos tw tg tc = foldr (\row_tw acc -> (replace_typos_aux row_tw tg tc) ++ acc) [] (tail (projection ["Name"] tw))
